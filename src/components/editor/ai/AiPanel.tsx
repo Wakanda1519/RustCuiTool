@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import type {
@@ -24,18 +28,22 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MODELS, type Effort, type ModelId } from "@/lib/ai/agent";
+import type { TKey } from "@/lib/i18n/dictionary";
+import { useT } from "@/lib/i18n/useT";
+import { readImageDataUrl } from "@/lib/platform/desktop";
 import { CONTEXT_TAG, useAi, type ImageAttachment } from "@/store/ai";
 import { Button, Segmented } from "@/components/ui/primitives";
 import { BridgeSection } from "./BridgeSection";
 
-const SUGGESTIONS = [
-  "Сделай окно магазина на 6 товаров с кнопками «Купить» и закрытием",
-  "Добавь HUD-плашку слева сверху: название сервера и онлайн",
-  "Сделай всё окно адаптивным: переведи размеры в якоря",
-  "Проверь проект и исправь все проблемы",
+const SUGGESTION_KEYS: TKey[] = [
+  "ai.suggestion1",
+  "ai.suggestion2",
+  "ai.suggestion3",
+  "ai.suggestion4",
 ];
 
 type Block = BetaContentBlock | BetaContentBlockParam;
+type TFn = ReturnType<typeof useT>;
 
 export function AiPanel() {
   const apiKey = useAi((s) => s.apiKey);
@@ -52,18 +60,16 @@ function KeySetup({ onDone }: { onDone: () => void }) {
   const current = useAi((s) => s.apiKey);
   const setSettings = useAi((s) => s.setSettings);
   const [key, setKey] = useState(current);
+  const t = useT();
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="rounded-2xl border border-line bg-gradient-to-b from-rust/10 to-transparent p-4">
         <div className="mb-3 grid size-10 place-items-center rounded-xl bg-rust/15 text-rust-hi">
           <Sparkles className="size-5" />
         </div>
-        <h3 className="text-[14px] font-semibold">Claude in the editor</h3>
-        <p className="mt-1 text-[12px] leading-relaxed text-muted">
-          Describe a UI or paste a mockup screenshot — Claude builds it right on the canvas, and every change is a
-          normal undo step.
-        </p>
-        <label className="mt-4 block text-[11px] font-medium text-muted">Anthropic API key</label>
+        <h3 className="text-[14px] font-semibold">{t("ai.keyTitle")}</h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-muted">{t("ai.keyDescription")}</p>
+        <label className="mt-4 block text-[11px] font-medium text-muted">{t("ai.apiKey")}</label>
         <input
           type="password"
           value={key}
@@ -74,11 +80,11 @@ function KeySetup({ onDone }: { onDone: () => void }) {
           spellCheck={false}
         />
         <p className="mt-1.5 text-[11px] leading-snug text-faint">
-          Stored only in this browser and sent directly to api.anthropic.com. Get one at{" "}
+          {t("ai.storedBefore")}{" "}
           <a className="text-sky hover:underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
-            console.anthropic.com
+            {t("ai.consoleLink")}
           </a>
-          .
+          {t("ai.storedAfter")}
         </p>
         <div className="mt-3 flex gap-2">
           <Button
@@ -90,47 +96,65 @@ function KeySetup({ onDone }: { onDone: () => void }) {
               onDone();
             }}
           >
-            <KeyRound className="size-3.5" /> Save key
+            <KeyRound className="size-3.5" /> {t("ai.saveKey")}
           </Button>
           {current && (
             <Button variant="ghost" onClick={onDone}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           )}
         </div>
       </div>
-      <p className="mt-3 px-1 text-[11.5px] leading-relaxed text-faint">
-        Prefer Claude Code or Claude Desktop? Use the MCP bridge below — no key needed here.
-      </p>
+      <p className="mt-3 px-1 text-[11.5px] leading-relaxed text-faint">{t("ai.mcpHint")}</p>
     </div>
   );
 }
 
-async function toAttachment(file: File): Promise<ImageAttachment | null> {
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function imageToAttachment(img: HTMLImageElement): ImageAttachment {
+  // Keep the long edge ≤ 1568px — larger images are downscaled by the API anyway.
+  const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  return { mediaType: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+}
+
+async function toAttachment(file: Blob): Promise<ImageAttachment | null> {
   if (!file.type.startsWith("image/")) return null;
   const url = URL.createObjectURL(file);
   try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = url;
-    });
-    // Keep the long edge ≤ 1568px — larger images are downscaled by the API anyway.
-    const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-    return { mediaType: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+    return imageToAttachment(await loadImage(url));
+  } catch {
+    return null;
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
+/** Native drops only expose a path, so read and downscale it in the webview. */
+async function pathToAttachment(path: string): Promise<ImageAttachment | null> {
+  if (!/\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(path)) return null;
+  try {
+    return imageToAttachment(await loadImage(await readImageDataUrl(path)));
+  } catch {
+    return null;
+  }
+}
+
 function Chat({ onEditKey }: { onEditKey: () => void }) {
   const { messages, streaming, running, error, model, effort, send, stop, clear, setSettings } = useAi();
+  const t = useT();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -146,6 +170,17 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
     const out = (await Promise.all([...files].map(toAttachment))).filter(Boolean) as ImageAttachment[];
     if (out.length) setImages((cur) => [...cur, ...out].slice(0, 4));
   };
+
+  // Files dropped from the desktop app arrive as paths, routed here by the native drop handler.
+  useEffect(() => {
+    const onAttach = async (event: Event) => {
+      const paths = (event as CustomEvent<string[]>).detail ?? [];
+      const out = (await Promise.all(paths.map(pathToAttachment))).filter(Boolean) as ImageAttachment[];
+      if (out.length) setImages((cur) => [...cur, ...out].slice(0, 4));
+    };
+    window.addEventListener("rustcui:attach-images", onAttach);
+    return () => window.removeEventListener("rustcui:attach-images", onAttach);
+  }, []);
 
   const submit = (value = text) => {
     if (running) return;
@@ -173,16 +208,23 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
             value={effort}
             onChange={(v) => setSettings({ effort: v as Effort })}
             options={[
-              { value: "low", label: "Low", title: "Fast, cheap" },
-              { value: "medium", label: "Med", title: "Balanced (default)" },
-              { value: "high", label: "High", title: "Most careful" },
+              { value: "low", label: t("ai.effort.low"), title: t("ai.effort.lowTitle") },
+              { value: "medium", label: t("ai.effort.medium"), title: t("ai.effort.mediumTitle") },
+              { value: "high", label: t("ai.effort.high"), title: t("ai.effort.highTitle") },
             ]}
           />
         )}
-        <Button variant="ghost" size="sm" className="px-1.5" title="API key" onClick={onEditKey}>
+        <Button variant="ghost" size="sm" className="px-1.5" title={t("ai.apiKeyTitle")} onClick={onEditKey}>
           <KeyRound className="size-3.5" />
         </Button>
-        <Button variant="ghost" size="sm" className="px-1.5" title="New conversation" disabled={!messages.length} onClick={clear}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="px-1.5"
+          title={t("ai.newConversation")}
+          disabled={!messages.length}
+          onClick={clear}
+        >
           <Trash2 className="size-3.5" />
         </Button>
       </div>
@@ -191,21 +233,22 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
         {messages.length === 0 && (
           <div className="space-y-2 pt-2">
             <p className="flex items-center gap-2 text-[12px] text-muted">
-              <Sparkles className="size-3.5 text-rust-hi" /> Try asking:
+              <Sparkles className="size-3.5 text-rust-hi" /> {t("ai.tryAsking")}
             </p>
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => submit(s)}
-                className="block w-full rounded-xl border border-line bg-white/3 px-3 py-2 text-left text-[12px] leading-snug text-fg/85 transition hover:border-rust/40 hover:bg-rust/8"
-              >
-                {s}
-              </button>
-            ))}
-            <p className="px-1 pt-1 text-[11px] leading-relaxed text-faint">
-              Tip: paste (Ctrl+V) or drop a screenshot of a design and Claude will recreate it.
-            </p>
+            {SUGGESTION_KEYS.map((key) => {
+              const suggestion = t(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => submit(suggestion)}
+                  className="block w-full rounded-xl border border-line bg-white/3 px-3 py-2 text-left text-[12px] leading-snug text-fg/85 transition hover:border-rust/40 hover:bg-rust/8"
+                >
+                  {suggestion}
+                </button>
+              );
+            })}
+            <p className="px-1 pt-1 text-[11px] leading-relaxed text-faint">{t("ai.tip")}</p>
           </div>
         )}
         <Transcript messages={messages} />
@@ -217,7 +260,7 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
         )}
         {running && !streaming?.text && (
           <div className="flex items-center gap-2 text-[12px] text-muted">
-            <Loader2 className="size-3.5 animate-spin" /> Working…
+            <Loader2 className="size-3.5 animate-spin" /> {t("ai.working")}
           </div>
         )}
         {error && (
@@ -229,6 +272,7 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
 
       <div
         className="border-t border-line p-2.5"
+        data-drop-target="ai"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -259,7 +303,7 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
         <div className="flex items-end gap-1.5 rounded-xl border border-line bg-black/30 p-1.5 transition focus-within:border-rust/60">
           <button
             type="button"
-            title="Attach a mockup image"
+            title={t("ai.attach")}
             onClick={() => fileRef.current?.click()}
             className="grid size-7 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-white/8 hover:text-fg"
           >
@@ -293,14 +337,15 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
               }
             }}
             rows={1}
-            placeholder="Describe what to build or change…"
+            data-ai-input
+            placeholder={t("ai.placeholder")}
             className="max-h-40 min-h-7 flex-1 resize-none bg-transparent py-1 text-[12.5px] leading-snug outline-none placeholder:text-faint"
             style={{ fieldSizing: "content" } as React.CSSProperties}
           />
           {running ? (
             <button
               type="button"
-              title="Stop"
+              title={t("ai.stop")}
               onClick={stop}
               className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/10 text-fg transition hover:bg-white/15"
             >
@@ -309,7 +354,7 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
           ) : (
             <button
               type="button"
-              title="Send (Enter)"
+              title={t("ai.send")}
               disabled={!text.trim() && !images.length}
               onClick={() => submit()}
               className="grid size-7 shrink-0 place-items-center rounded-lg bg-rust text-white transition hover:bg-rust-hi disabled:opacity-30"
@@ -394,11 +439,12 @@ function AssistantText({ text }: { text: string }) {
 
 function Thinking({ text, live }: { text: string; live?: boolean }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   return (
     <div className="text-[11.5px] text-faint">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 hover:text-muted">
         <Brain className={clsx("size-3.5", live && "animate-pulse")} />
-        {live ? "Thinking…" : "Thought process"}
+        {live ? t("ai.thinking") : t("ai.thoughtProcess")}
         <ChevronRight className={clsx("size-3 transition", open && "rotate-90")} />
       </button>
       {open && <p className="mt-1 border-l border-line-strong pl-2.5 leading-relaxed whitespace-pre-wrap">{text}</p>}
@@ -406,12 +452,13 @@ function Thinking({ text, live }: { text: string; live?: boolean }) {
   );
 }
 
-function summarize(name: string, input: unknown): string {
+function summarize(name: string, input: unknown, t: TFn): string {
   const i = (input ?? {}) as Record<string, unknown>;
   switch (name) {
     case "add_elements": {
       const els = Array.isArray(i.elements) ? (i.elements as { name?: string }[]) : [];
-      return `${els.length} element${els.length === 1 ? "" : "s"}${els[0]?.name ? ` · ${els[0].name}` : ""}`;
+      const count = t(els.length === 1 ? "ai.summary.element" : "ai.summary.elements", { count: els.length });
+      return `${count}${els[0]?.name ? ` · ${els[0].name}` : ""}`;
     }
     case "update_element":
     case "move_element":
@@ -419,30 +466,25 @@ function summarize(name: string, input: unknown): string {
     case "delete_elements":
       return Array.isArray(i.names) ? i.names.join(", ") : "";
     case "replace_project":
-      return Array.isArray(i.elements) ? `${i.elements.length} elements` : "";
+      return Array.isArray(i.elements) ? t("ai.summary.replace", { count: i.elements.length }) : "";
     case "export_code":
       return String(i.format ?? "");
     case "select_element":
-      return String(i.name ?? "none");
+      return String(i.name ?? t("common.none"));
     default:
       return "";
   }
 }
 
-const TOOL_LABELS: Record<string, string> = {
-  get_project: "Read project",
-  get_screenshot: "Look at canvas",
-  add_elements: "Add",
-  update_element: "Update",
-  delete_elements: "Delete",
-  move_element: "Move",
-  replace_project: "Replace project",
-  select_element: "Select",
-  export_code: "Export",
-};
+function toolLabel(name: string, t: TFn): string {
+  const key = `ai.tool.${name}` as TKey;
+  const label = t(key);
+  return label === key ? name : label;
+}
 
 function ToolChip({ name, input, result }: { name: string; input: unknown; result?: BetaToolResultBlockParam }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const status = !result ? "pending" : result.is_error ? "error" : "ok";
   const shot =
     Array.isArray(result?.content) &&
@@ -463,13 +505,13 @@ function ToolChip({ name, input, result }: { name: string; input: unknown; resul
           <CircleAlert className="size-3.5 shrink-0 text-red-400" />
         )}
         <Wrench className="size-3 shrink-0 text-faint" />
-        <span className="font-medium text-fg/85">{TOOL_LABELS[name] ?? name}</span>
-        <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-faint">{summarize(name, input)}</span>
+        <span className="font-medium text-fg/85">{toolLabel(name, t)}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-faint">{summarize(name, input, t)}</span>
         <ChevronRight className={clsx("size-3 shrink-0 text-faint transition", open && "rotate-90")} />
       </button>
       {shotSrc && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={shotSrc} alt="Canvas screenshot" className="mx-2.5 mb-2 w-[calc(100%-20px)] rounded-md ring-1 ring-line" />
+        <img src={shotSrc} alt={t("ai.canvasScreenshot")} className="mx-2.5 mb-2 w-[calc(100%-20px)] rounded-md ring-1 ring-line" />
       )}
       {open && (
         <div className="space-y-1.5 border-t border-line p-2">

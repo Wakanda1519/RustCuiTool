@@ -1,0 +1,65 @@
+RustCuiTool
+===========
+
+Authors
+-------
+Original project and author:
+  hammzat — https://github.com/hammzat
+
+Fork maintained by:
+  Wakanda1519 — https://github.com/Wakanda1519
+  createprojectile — https://github.com/createprojectile
+
+License
+-------
+This work is licensed under the GNU General Public License, version 3
+(GPL-3.0-only). The full license text is in the LICENSE file.
+
+Modification notice (GPLv3 section 5(a))
+----------------------------------------
+Modified on 2026-11-04 by the RustCuiTool fork contributors.
+
+This distribution adds, among other things:
+
+- Rebranding to RustCuiTool and a single-file Windows build (RCT.exe).
+- Multi-page (screen) support: named pages, page assignment for root
+  elements, page switching in the editor, page-aware rendering and
+  persistence, and migration of older project files.
+- Declarative button interactions (show / hide / toggle / closeSelf /
+  destroy / command) that compile to CUI `command` / `close` fields.
+- A live CUI preview simulator with a routed command log.
+- Multi-page C# plugin generation: one AddPage<Name> method per page and a
+  command router (page / hide / toggle / close / destroy).
+- Per-page JSON export, additional validation checks, the "Tabbed pages"
+  template, and unit tests.
+- Russian localization with Russian as the default interface language and a
+  Рус / Eng switcher (the choice is stored locally).
+- Multi-selection with Ctrl+click in the element tree and on the canvas,
+  moving several elements together, and paste with a cascade offset.
+- Layout groups (Shift+A): equal spacing/padding, automatic reflow, shared
+  child size, and paste inside a group using the configured spacing.
+- Alt-based distance measurements to nearby elements and canvas edges,
+  Alt-drag symmetric resizing, a visible “?” shortcut button, and
+  Ctrl+Z / Ctrl+X undo and redo shortcuts.
+- An item-icon folder setting on the start screen with native path support
+  and a browser folder picker. Image components with an item ID render the
+  real Rust item icon instead of a placeholder.
+- A visual item picker for the inspector: search by display name, shortname
+  or item ID, category filters, a grouped grid of items with thumbnails,
+  lazy thumbnail loading, and an embedded Rust item catalog.
+
+All changed or added source files carry a header with
+`SPDX-License-Identifier: GPL-3.0-only`, the modification date and a note
+that the file was modified (GPLv3 section 5(a)).
+
+Third-party components
+----------------------
+Third-party dependencies are listed in package.json and keep their own
+licenses. They are not part of the RustCuiTool source distribution and
+are fetched by the package manager.
+
+Item metadata in src/lib/cui/rust-items.json and
+src/lib/cui/rust-item-catalog.json consists of factual item identifiers,
+shortnames, display names and categories extracted from Rust game files.
+Rust and its assets belong to Facepunch Studios; item icons are read from a
+folder selected by the user and are not redistributed with this project.

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import clsx from "clsx";
@@ -5,6 +9,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import type { Color, Vec2 } from "@/lib/cui/types";
 import { fmtColor, parseNumbers } from "@/lib/cui/serialize";
 import { round } from "@/lib/cui/geometry";
+import { useT } from "@/lib/i18n/useT";
 import { rgba } from "../render/NodeView";
 
 export const inputCls =
@@ -212,6 +217,7 @@ const SWATCHES: Color[] = [
 export function ColorInput({ value, onChange }: { value: Color; onChange: (c: Color) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const t = useT();
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
@@ -219,7 +225,7 @@ export function ColorInput({ value, onChange }: { value: Color; onChange: (c: Co
           type="button"
           className="checker relative size-7 shrink-0 overflow-hidden rounded-md ring-1 ring-line-strong"
           onClick={() => setOpen((o) => !o)}
-          title="Palette"
+          title={t("fields.palette")}
         >
           <span className="absolute inset-0" style={{ background: rgba(value) }} />
         </button>

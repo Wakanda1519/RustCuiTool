@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RustCUI Editor MCP server (local, stdio).
+ * RustCuiTool MCP server (local, stdio).
  *
  * Speaks MCP over stdio to an MCP client (Claude Code, Claude Desktop, …) and
  * forwards every tool call over a local WebSocket to the editor open in the
@@ -37,7 +37,7 @@ function originAllowed(origin) {
 }
 
 const link = new EditorLink(
-  "RustCUI Editor is not connected. Ask the user to open the editor, go to the AI tab and enable " +
+  "RustCuiTool is not connected. Ask the user to open the editor, go to the AI tab and enable " +
     `"MCP bridge" in Local mode (port ${PORT}).`,
 );
 

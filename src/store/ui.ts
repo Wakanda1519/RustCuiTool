@@ -13,9 +13,12 @@ interface UiState {
   /** Workspace-only fullscreen: canvas fills the monitor 1:1 like in game. */
   fullscreen: boolean;
   rightTab: "inspector" | "ai";
+  /** A file from the OS is currently hovering the window. */
+  dropActive: boolean;
   setRightTab(tab: "inspector" | "ai"): void;
   setFullscreen(on: boolean): void;
   setCursor(c: { x: number; y: number } | null): void;
+  setDropActive(on: boolean): void;
   notify(text: string): void;
   open(d: DialogKind): void;
 }
@@ -29,6 +32,7 @@ export const useUi = create<UiState>()((set) => ({
   dialog: null,
   fullscreen: false,
   rightTab: "inspector",
+  dropActive: false,
   setRightTab: (rightTab) => set({ rightTab }),
   setFullscreen: (on) => {
     set({ fullscreen: on });
@@ -42,6 +46,7 @@ export const useUi = create<UiState>()((set) => ({
     } catch {}
   },
   setCursor: (cursor) => set({ cursor }),
+  setDropActive: (dropActive) => set((s) => (s.dropActive === dropActive ? s : { dropActive })),
   notify: (text) => {
     clearTimeout(toastTimer);
     set({ toast: { id: Date.now(), text } });

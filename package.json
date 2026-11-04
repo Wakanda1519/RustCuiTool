@@ -1,9 +1,14 @@
 {
-  "name": "rust-cui-editor",
+  "name": "rustcuitool",
   "version": "2.0.0",
   "private": true,
-  "description": "Visual editor for Rust (Oxide / Carbon) CUI interfaces",
-  "license": "GPL-3.0",
+  "description": "RustCuiTool — visual editor for Rust (Oxide / Carbon) CUI interfaces",
+  "license": "GPL-3.0-only",
+  "author": "hammzat (https://github.com/hammzat)",
+  "contributors": [
+    "Wakanda1519 (https://github.com/Wakanda1519)",
+    "createprojectile (https://github.com/createprojectile)"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,11 +17,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "mcp": "node mcp/rustcui-mcp.mjs",
-    "relay": "node mcp/relay.mjs"
+    "relay": "node mcp/relay.mjs",
+    "desktop:dev": "next dev",
+    "desktop:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-exe.ps1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
     "@modelcontextprotocol/sdk": "^1.31.0",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "clsx": "^2.1.1",
     "html-to-image": "^1.11.13",
     "immer": "^11.1.18",
@@ -29,6 +39,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@tauri-apps/cli": "^2.12.4",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

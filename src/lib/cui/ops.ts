@@ -1,5 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (pages, interactions, preview).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 import { produce } from "immer";
 import { layoutProject, round, screenBox, walkOrder } from "./geometry";
+import { pageRootIds } from "./pages";
 import { exportJson, fieldFromJson, importJson, parseNumbers, validate } from "./serialize";
 import { COMPONENT_SPECS, defaultProps } from "./specs";
 import { LAYERS, type ComponentType, type CuiNode, type Layer, type Project, type Vec2 } from "./types";
@@ -46,6 +51,12 @@ export function describeProject(project: Project, aspect: number, selectedId?: s
   return {
     name: project.name,
     layer: project.layer,
+    commandPrefix: project.commandPrefix,
+    pages: project.pages.map((page) => ({
+      name: page.name,
+      entry: page.id === project.entryPageId,
+      elements: pageRootIds(project, page.id).map((id) => project.nodes[id].name),
+    })),
     screen: { width: screen.w, height: screen.h, note: "Rust reference space; offsets are in these pixels, origin bottom-left, Y up" },
     selected: selectedId ? (project.nodes[selectedId]?.name ?? null) : null,
     elements: exportJson(project),
@@ -57,7 +68,7 @@ export function describeProject(project: Project, aspect: number, selectedId?: s
 export function appendElements(project: Project, elements: unknown): { project: Project; added: string[]; warnings: string[] } {
   if (!Array.isArray(elements) || elements.length === 0) throw new Error("`elements` must be a non-empty array");
   const existing = byName(project);
-  const { project: imported, warnings, externalParents } = importJson(JSON.stringify(elements));
+  const { project: imported, warningItems, externalParents } = importJson(JSON.stringify(elements));
 
   const clashes = Object.values(imported.nodes)
     .map((n) => n.name)
@@ -77,11 +88,14 @@ export function appendElements(project: Project, elements: unknown): { project: 
         d.nodes[parent.id].children.push(rootId);
         resolved.add(parentName!);
       } else {
+        d.nodes[rootId].pageId = project.entryPageId ?? undefined;
         d.rootIds.push(rootId);
       }
     }
   });
-  const kept = warnings.filter((w) => ![...resolved].some((p) => w.includes(`parent "${p}" not found`)));
+  const kept = warningItems
+    .filter((w) => !(w.key === "import.warnParentMissing" && resolved.has(String(w.params?.parent))))
+    .map((w) => w.text);
   const rootLayers = elements
     .map((e) => (e && typeof e === "object" ? (e as Json).parent : undefined))
     .filter(isLayer);
@@ -198,5 +212,13 @@ export function replaceProject(
   if (typeof opts.name === "string" && opts.name) imported.name = opts.name;
   if (isLayer(opts.layer)) imported.layer = opts.layer;
   else if (!elements.length) imported.layer = project.layer;
+
+  // Keep the document's pages and place everything on the entry page.
+  imported.pages = project.pages;
+  imported.entryPageId = project.entryPageId;
+  imported.commandPrefix = project.commandPrefix;
+  for (const id of imported.rootIds) {
+    if (imported.nodes[id]) imported.nodes[id].pageId = project.entryPageId ?? undefined;
+  }
   return { project: imported, warnings };
 }

@@ -1,104 +1,149 @@
-# RustCUI Editor
+# 🎨 RustCuiTool
 
-Visual editor for **Rust CUI** (Community UI): build plugin interfaces in the browser and export them as
-`CuiHelper.AddUi` JSON or ready-to-paste C# for **Oxide / uMod** and **Carbon**.
+**Визуальный редактор Rust CUI (Community UI) для Oxide / uMod и Carbon: собирайте интерфейсы мышкой, проверяйте их в живом превью и экспортируйте готовый `CuiHelper.AddUi` JSON или C#-код. Поставляется как один `RCT.exe`.**
 
-## Features
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?style=flat-square&logo=windows&logoColor=white)
 
-- **WYSIWYG canvas.** Drag, resize, smart snapping guides, grid, zoom, and a 720p reference space that matches how Rust scales UI.
-- **Real anchors and offsets.** A Unity-style anchor preset picker. You choose whether dragging changes *offsets* (pixel-perfect) or *anchors* (scales with any screen). Reparenting keeps the element in place.
-- **All CUI components:** Image, RawImage, Text, Button, Outline, InputField, Countdown, NeedsCursor, NeedsKeyboard. That includes sprites, materials (the blur materials are previewed), item icons, fade-in/out, `destroyUi` and `update`.
-- **Accurate preview.** Rust fonts (Roboto Condensed, Droid Sans Mono, Permanent Marker), rich text (`<b>`, `<i>`, `<color>`, `<size>`), text alignment, outlines, gradient sprites, and a vanilla HUD overlay for checking overlaps.
-- **Element tree.** Drag & drop to reorder or reparent, rename, hide, lock, duplicate, copy/paste.
-- **Export.** Minimal or full JSON, a C# `CuiElementContainer` snippet, or a complete plugin skeleton. Export runs validation first: duplicate names, conflicting graphic components, missing `NeedsCursor`, and more.
-- **Import** of existing CUI JSON, so you can edit UIs from existing plugins.
-- **Undo/redo, keyboard shortcuts** (press `?` in the editor), autosave to `localStorage`, and `.rcui.json` project files.
+## Особенности
 
-## AI mode
+* **WYSIWYG-канвас.** Перетаскивание, изменение размера, умные направляющие, сетка, зум и опорное пространство 720p — так же, как UI масштабируется в Rust.
+* **Настоящие якоря и оффсеты.** Пресеты якорей в стиле Unity. Выбирайте, что меняет перетаскивание — *оффсеты* (пиксельная точность) или *якоря* (масштабирование под любой экран). При смене родителя элемент остаётся на месте.
+* **Все CUI-компоненты:** Image, RawImage, Text, Button, Outline, InputField, Countdown, NeedsCursor, NeedsKeyboard. Спрайты, материалы (blur-материалы отображаются в превью), иконки предметов, fade-in/out, `destroyUi` и `update`.
+* **Точное превью.** Шрифты Rust (Roboto Condensed, Droid Sans Mono, Permanent Marker), rich text (`<b>`, `<i>`, `<color>`, `<size>`), выравнивание, обводки, градиентные спрайты и оверлей ванильного HUD для проверки пересечений.
+* **Страницы и действия.** Разделяйте интерфейс на именованные экраны и назначайте кнопкам действия: показать / скрыть / переключить страницу, закрыть текущую, удалить элемент или отправить консольную команду. На экспорте действия превращаются в CUI `command` / `close`.
+* **Живое превью.** Нажмите `P` или кнопку **Превью**, чтобы кликать кнопки, переключать страницы и смотреть, какие команды получит плагин. Превью не изменяет проект.
+* **Экспорт и импорт.** Минимальный или полный JSON, C#-фрагмент `CuiElementContainer` или готовый скелет плагина. Перед экспортом выполняется валидация: дубли имён, конфликтующие графические компоненты, отсутствие `NeedsCursor` и другое. Существующий CUI JSON можно импортировать и редактировать.
+* **Мультистраничный C#-экспорт.** Для проекта со страницами генерируется по одному методу `AddPage<Name>` на страницу плюс роутер команд (`page`, `hide`, `toggle`, `close`, `destroy`).
+* **Дерево элементов и удобное редактирование.** Drag & drop для изменения порядка и вложенности, переименование, скрытие, блокировка, дублирование, копирование и вставка. Мультивыбор через `Ctrl+click`, layout-группы (`Shift+A`), измерения расстояний по `Alt`.
+* **Иконки предметов.** Укажите папку `Bundles\items` из установленного Rust — компонент Image с `Item ID` покажет настоящую иконку. В инспекторе есть визуальный выбор предмета с поиском и категориями (489 предметов).
+* **Несколько проектов.** Вкладки с собственной историей undo, зумом и настройками канваса, автосохранение, файлы `.rcui.json`, список недавних проектов и продолжение прошлой сессии.
+* **Русский и английский интерфейс.** Русский по умолчанию, переключение **Рус / Eng** в тулбаре или на стартовом экране. Выбор сохраняется локально.
 
-**In-app assistant (AI tab, `Ctrl+K`).** Chat with Claude, paste a mockup screenshot, and watch the UI get built on the
-canvas. Paste your Anthropic API key once. It is stored only in your browser and requests go directly from the browser to
-`api.anthropic.com`. Claude edits the document through the same tools as the MCP server, and every change is a normal
-undo step. You can choose the model (Opus 5.5 by default, Sonnet 5.5 or Haiku 4.5) and the effort level.
+## Ограничения
 
-**MCP server.** Claude Code, Claude Desktop, Cursor and other MCP clients can drive the editor that is open in your
-browser:
+* **`RCT.exe` работает только на Windows 10+ x64** и использует Microsoft Edge WebView2 Runtime.
+* **В `RCT.exe` нет встроенного Node.js.** MCP-сервер запускается отдельно командой `npm run mcp`, если нужен доступ из Claude Desktop, Claude Code, Cursor и других MCP-клиентов.
+* **AI-ассистент требует интернет и ключ Anthropic API.** Ключ хранится только локально в профиле WebView2 на вашей машине.
+* **Редактор создаёт UI, а не весь плагин.** На выходе — JSON для `CuiHelper.AddUi` и C#-код интерфейса; игровая логика плагина остаётся на вас.
+* **Linux и macOS** поддерживаются для браузерной сборки, но не для готового `RCT.exe`.
 
-```bash
-# Claude Code: inside this repo it's picked up automatically from .mcp.json, otherwise:
-claude mcp add rustcui-editor -- node /path/to/RustCUI-Editor/mcp/rustcui-mcp.mjs
-```
+## Установка
 
-Claude Desktop (`claude_desktop_config.json`):
+### Требования
 
-```json
-{ "mcpServers": { "rustcui-editor": { "command": "node", "args": ["/path/to/RustCUI-Editor/mcp/rustcui-mcp.mjs"] } } }
-```
+* Windows 10+ x64
+* [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
+* Для сборки: Node.js 22+, npm и .NET SDK 10
 
-Then open the editor and turn on **AI → MCP bridge**. The server forwards tool calls over a local WebSocket
-(`ws://127.0.0.1:7331`, which you can change with `RUSTCUI_BRIDGE_PORT`) to the editor tab. It only accepts connections
-from localhost pages and from the origins listed in `RUSTCUI_ALLOWED_ORIGINS` (comma-separated; default
-`https://hammzat.github.io`).
+### Готовый файл
 
-**claude.ai connector (remote MCP).** claude.ai connects to a public server, so the repo ships a small relay
-(`mcp/relay.mjs`). claude.ai calls it over Streamable HTTP at `/mcp/<token>`, and the editor tab connects to
-`/bridge/<token>` over WebSocket. The random pairing token is generated in the editor and is the only credential, so keep
-the connector URL private and serve the relay over HTTPS.
+Возьмите **`RCT.exe`** из корня репозитория и запустите. Установка не требуется: интерфейс распакуется в `%LOCALAPPDATA%\RustCuiTool` при первом запуске.
 
-```bash
-npm run relay                                        # listens on :8787
-npx cloudflared tunnel --url http://localhost:8787   # quick public HTTPS URL, or deploy it:
-docker build -f mcp/Dockerfile -t rustcui-relay . && docker run -p 8787:8787 rustcui-relay
-```
-
-In the editor, go to **AI → MCP bridge → Remote**, paste the relay URL, enable the bridge and copy the **Connector URL**.
-In claude.ai, go to **Settings → Connectors → Add custom connector** and paste it. **New pairing token** invalidates the
-old URL.
-
-Tools: `get_project`, `get_screenshot` (Claude sees the rendered canvas and can fix the layout itself), `add_elements`, `update_element`, `delete_elements`, `move_element`, `replace_project`,
-`select_element`, `export_code`. They accept native `CuiHelper.AddUi` JSON. Tool definitions live in
-`src/lib/ai/tools.json`, and the in-app assistant and the MCP server share them.
-
-## Stack
-
-Next.js 16 (App Router, static export) · React 19 · TypeScript · Tailwind CSS v4 · Zustand + Immer · Anthropic SDK · MCP SDK · Vitest.
-
-## Development
+### Сборка
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm test           # unit tests for geometry / import / export / codegen
-npm run lint
-npm run typecheck
-npm run build      # static site in ./out
+npm ci
+npm run desktop:build
 ```
 
-The build is a fully static site, so the `out/` folder can be hosted anywhere. To host under a sub-path
-(GitHub Pages), set `NEXT_PUBLIC_BASE_PATH=/RustCUI-Editor` at build time. The included workflow does this
-and deploys to Pages from the default branch.
+Скрипт соберёт статический экспорт, упакует его вместе с `icon.ico` и создаст `RCT.exe` в корне проекта. Отдельные команды:
 
-## Project layout
-
-```
-app/                     Next.js entry (layout, page, global styles)
-src/lib/cui/             Framework-free core
-  types.ts               CUI data model
-  specs.ts               Component registry (drives inspector, JSON and C#)
-  geometry.ts            Anchor/offset math in Rust space (y-up, 720p reference)
-  serialize.ts           JSON export/import + validation
-  csharp.ts              Oxide / Carbon C# generator
-  factory.ts             Element presets and templates
-  ops.ts                 Name-based edit operations used by AI tools
-src/lib/ai/              Tool definitions, executor, Claude agent loop, MCP bridge client
-mcp/core.mjs             Shared MCP server factory + editor link
-mcp/rustcui-mcp.mjs      Local MCP stdio server ↔ WebSocket bridge to the editor
-mcp/relay.mjs            Remote MCP relay for claude.ai connectors (+ mcp/Dockerfile)
-src/store/               Zustand stores (document + history, transient UI)
-src/components/editor/   Canvas, element tree, inspector, dialogs
-tests/                   Vitest suites
+```bash
+npm run dev      # разработка на http://localhost:3000
+npm run build    # статический сайт в ./out
+npm run start    # локальный сервер для ./out
 ```
 
-## License
+### Использование
 
-GPL-3.0. See [LICENSE](LICENSE).
+1. Запустите `RCT.exe` — откроется стартовый экран.
+2. Создайте проект из шаблона (**Пустой**, **Окно магазина**, **Статус HUD**, **Вкладки**) или откройте существующий `.rcui.json`.
+3. Соберите интерфейс на канвасе: перетаскивайте элементы, настраивайте якоря, стили и тексты в инспекторе.
+4. Добавьте страницы и действия кнопкам, если интерфейс должен переключать экраны.
+5. Нажмите **Превью** или `P`, чтобы проверить поведение и команды.
+6. Экспортируйте JSON или C# и вставьте результат в плагин Oxide / Carbon.
+7. Для настоящих иконок предметов укажите папку `...\RustClient_Data\Bundles\items` на стартовом экране.
+
+<img width="1400" alt="Стартовый экран RustCuiTool" src="docs/screenshot-launcher.png" />
+
+Все настройки, сессия и профиль WebView2 лежат в `%LOCALAPPDATA%\RustCuiTool`. Удалите эту папку, чтобы полностью сбросить локальные данные.
+
+## AI и MCP
+
+**AI-ассистент** открывается по `Ctrl+K` на вкладке AI. Опишите интерфейс или приложите скриншот макета — Claude соберёт элементы на канвасе. Каждое изменение становится обычным шагом undo. Ключ Anthropic API вводится один раз и хранится локально.
+
+**MCP-сервер** позволяет управлять открытым редактором из Claude Code, Claude Desktop, Cursor и других MCP-клиентов:
+
+```bash
+npm run mcp
+```
+
+В редакторе включите **AI → MCP bridge**. Сервер передаёт вызовы инструментов по локальному WebSocket (`ws://127.0.0.1:7331`, порт меняется через `RUSTCUI_BRIDGE_PORT`). Для claude.ai есть отдельный relay:
+
+```bash
+npm run relay
+```
+
+Инструменты: `get_project`, `get_screenshot`, `add_elements`, `update_element`, `delete_elements`, `move_element`, `replace_project`, `select_element`, `export_code`.
+
+## Вопрос - ответ
+
+<details>
+  <summary><b>Нужен ли установленный Rust, чтобы пользоваться редактором?</b></summary>
+  <br>
+  Нет. RustCuiTool работает автономно: создаёт JSON и C# для плагина. Rust нужен только для проверки интерфейса в игре и, по желанию, для папки с иконками предметов.
+</details>
+<details>
+  <summary><b>Где хранятся проекты и настройки?</b></summary>
+  <br>
+  Проекты вы сохраняете сами в файлы <code>.rcui.json</code>. Сессия, недавние файлы, язык, настройки канваса и профиль WebView2 хранятся в <code>%LOCALAPPDATA%\RustCuiTool</code>. Автосохранение также дублирует состояние в localStorage внутри профиля.
+</details>
+<details>
+  <summary><b>Почему RCT.exe весит около 51 МБ?</b></summary>
+  <br>
+  Внутри — самостоятельно упакованный .NET Runtime, загрузчик WebView2 и весь статический интерфейс приложения. Зато не нужен установщик, а рядом с exe не появляются DLL и папки.
+</details>
+<details>
+  <summary><b>Работает ли редактор без интернета?</b></summary>
+  <br>
+  Да, создание, редактирование, превью и экспорт работают офлайн. Интернет нужен только для AI-ассистента, удалённого MCP-релея и скачивания иконок из внешних источников, если вы ими пользуетесь.
+</details>
+<details>
+  <summary><b>Можно ли запустить в браузере, а не через RCT.exe?</b></summary>
+  <br>
+  Да. <code>npm run build</code> создаёт полностью статический сайт в <code>out/</code>, который можно разместить на любом хостинге, включая GitHub Pages. Браузерная версия использует стандартные файловые диалоги и HTML5 drag & drop.
+</details>
+<details>
+  <summary><b>Поддерживаются ли Oxide и Carbon?</b></summary>
+  <br>
+  Да, экспорт C# рассчитан на оба варианта: <code>CuiElementContainer</code>, методы <code>AddPage&lt;Name&gt;</code> и роутер команд. JSON совместим с <code>CuiHelper.AddUi</code>.
+</details>
+<details>
+  <summary><b>Где взять иконки предметов?</b></summary>
+  <br>
+  Укажите на стартовом экране папку <code>...\RustClient_Data\Bundles\items</code> из установленного Rust. После этого Image-компоненты с <code>Item ID</code> будут показывать настоящие иконки, а в инспекторе появится визуальный выбор предмета.
+</details>
+<details>
+  <summary><b>Как обновить приложение?</b></summary>
+  <br>
+  Замените старый <code>RCT.exe</code> новым. Проекты и настройки в <code>%LOCALAPPDATA%\RustCuiTool</code> сохранятся; при необходимости их можно удалить для чистого старта.
+</details>
+
+## Стек
+
+Next.js 16 (App Router, static export) · React 19 · TypeScript · Tailwind CSS v4 · Zustand + Immer · Anthropic SDK · MCP SDK · Vitest · .NET 10 WinForms + WebView2.
+
+## Авторы
+
+* **hammzat** — оригинальный проект и автор: [github.com/hammzat](https://github.com/hammzat)
+* **Wakanda1519** — участник форка: [github.com/Wakanda1519](https://github.com/Wakanda1519)
+* **createprojectile** — участник форка: [github.com/createprojectile](https://github.com/createprojectile)
+
+Подробнее — в [NOTICE](NOTICE).
+
+## Лицензия
+
+GPL-3.0-only. Полный текст — в [LICENSE](LICENSE), уведомления об изменениях и авторстве — в [NOTICE](NOTICE).

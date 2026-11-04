@@ -1,8 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import clsx from "clsx";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useT } from "@/lib/i18n/useT";
 
 type Variant = "ghost" | "subtle" | "primary" | "danger";
 
@@ -196,6 +201,7 @@ export function Dialog({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -226,7 +232,7 @@ export function Dialog({
             <h2 className="text-[15px] font-semibold">{title}</h2>
             {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("common.close")}>
             <X className="size-4" />
           </Button>
         </header>

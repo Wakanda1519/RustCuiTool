@@ -1,6 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
+import { translate } from "@/lib/i18n/dictionary";
 import { useEditor } from "@/store/editor";
+import { useI18n } from "@/store/i18n";
 import type { EditorHost, ToolImage } from "./executor";
 
 /** Transparent 1x1 GIF used when an external image can't be embedded (CORS). */
@@ -8,7 +14,7 @@ const PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABA
 
 async function screenshot({ hideHud }: { hideHud?: boolean }): Promise<ToolImage> {
   const stage = document.querySelector<HTMLElement>("[data-stage]");
-  if (!stage) throw new Error("The canvas is not visible");
+  if (!stage) throw new Error(translate(useI18n.getState().lang, "ai.error.canvasNotVisible"));
   const { toJpeg } = await import("html-to-image");
   const url = await toJpeg(stage, {
     // The stage is scaled by the zoom level; capture it at its 1280x720 logical size.

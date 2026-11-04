@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Noto_Sans_Mono, Permanent_Marker, Roboto_Condensed } from "next/font/google";
 import "./globals.css";
@@ -14,9 +18,9 @@ const marker = Permanent_Marker({ subsets: ["latin"], weight: "400", variable: "
 const droidMono = Noto_Sans_Mono({ subsets: ["latin", "cyrillic"], variable: "--font-droid-mono" });
 
 export const metadata: Metadata = {
-  title: "RustCUI Editor — visual UI builder for Rust plugins",
+  title: "RustCuiTool",
   description:
-    "Design Rust CUI in the browser: drag, anchor, style and export ready-to-use JSON or C# for Oxide / Carbon plugins.",
+    "Визуальный редактор Rust CUI: перетаскивайте, настраивайте якоря и стили, экспортируйте готовый JSON или C# для Oxide / Carbon.",
 };
 
 export const viewport: Viewport = { themeColor: "#0b0c0e" };
@@ -24,7 +28,7 @@ export const viewport: Viewport = { themeColor: "#0b0c0e" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="ru"
       className={`${inter.variable} ${mono.variable} ${robotoCondensed.variable} ${marker.variable} ${droidMono.variable}`}
     >
       <body>{children}</body>

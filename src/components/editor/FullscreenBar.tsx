@@ -1,7 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import { Crosshair, Grid3x3, Magnet, Minimize2, Redo2, Undo2 } from "lucide-react";
 import type { Box } from "@/lib/cui/geometry";
+import { useT } from "@/lib/i18n/useT";
 import { useEditor } from "@/store/editor";
 import { useUi } from "@/store/ui";
 import { Button, Kbd } from "@/components/ui/primitives";
@@ -23,6 +28,7 @@ export function FullscreenBar({
   const canRedo = useEditor((s) => s.future.length > 0);
   const cursor = useUi((s) => s.cursor);
   const s = useEditor.getState();
+  const t = useT();
   const px = (n: number) => Math.round(n * scale);
 
   return (
@@ -31,7 +37,7 @@ export function FullscreenBar({
         <span className="text-fg/80">
           {px(screen.w)}×{px(screen.h)}
         </span>
-        <span className="text-faint">→ export {screen.w}×{screen.h}</span>
+        <span className="text-faint">{t("fullscreen.export", { width: screen.w, height: screen.h })}</span>
         <span className="mx-2 h-4 w-px bg-line-strong" />
         {selBox ? (
           <span className="max-w-72 truncate">
@@ -46,23 +52,44 @@ export function FullscreenBar({
           <span>—</span>
         )}
         <span className="mx-2 h-4 w-px bg-line-strong" />
-        <Button variant="ghost" size="icon" className="size-7" title="Undo" disabled={!canUndo} onClick={s.undo}>
+        <Button variant="ghost" size="icon" className="size-7" title={t("fullscreen.undo")} disabled={!canUndo} onClick={s.undo}>
           <Undo2 className="size-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-7" title="Redo" disabled={!canRedo} onClick={s.redo}>
+        <Button variant="ghost" size="icon" className="size-7" title={t("fullscreen.redo")} disabled={!canRedo} onClick={s.redo}>
           <Redo2 className="size-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-7" active={view.snap} title="Snapping" onClick={() => s.setView({ snap: !view.snap })}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          active={view.snap}
+          title={t("fullscreen.snapping")}
+          onClick={() => s.setView({ snap: !view.snap })}
+        >
           <Magnet className="size-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-7" active={view.grid} title="Grid" onClick={() => s.setView({ grid: !view.grid })}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          active={view.grid}
+          title={t("fullscreen.grid")}
+          onClick={() => s.setView({ grid: !view.grid })}
+        >
           <Grid3x3 className="size-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-7" active={view.hud} title="Vanilla HUD" onClick={() => s.setView({ hud: !view.hud })}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          active={view.hud}
+          title={t("fullscreen.hud")}
+          onClick={() => s.setView({ hud: !view.hud })}
+        >
           <Crosshair className="size-3.5" />
         </Button>
         <Button variant="subtle" size="sm" className="ml-1 font-sans" onClick={() => useUi.getState().setFullscreen(false)}>
-          <Minimize2 className="size-3.5" /> Exit <Kbd>Esc</Kbd>
+          <Minimize2 className="size-3.5" /> {t("fullscreen.exit")} <Kbd>Esc</Kbd>
         </Button>
       </div>
     </div>

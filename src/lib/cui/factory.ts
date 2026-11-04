@@ -1,5 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (pages, interactions, preview).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 import { defaultProps } from "./specs";
-import type { Color, ComponentType, CuiComponent, CuiNode, FieldValue, Project, RectTransform, Vec2 } from "./types";
+import { DEFAULT_PAGE_NAME, derivePrefix, newPage } from "./pages";
+import type { Color, ComponentType, CuiComponent, CuiNode, CuiPage, FieldValue, Project, RectTransform, Vec2 } from "./types";
 import { uid } from "../uid";
 
 export type PresetKind = "panel" | "text" | "button" | "image" | "webimage" | "input" | "countdown" | "container";
@@ -113,9 +118,17 @@ function link(parent: CuiNode, ...children: CuiNode[]): CuiNode[] {
 // ---------------------------------------------------------------- templates
 
 type Tree = { n: CuiNode; kids?: Tree[] };
+type PageTrees = { name: string; trees: Tree[] };
 
 function build(name: string, layer: Project["layer"], trees: Tree[]): Project {
+  return buildPages(name, layer, [{ name: DEFAULT_PAGE_NAME, trees }]);
+}
+
+function buildPages(name: string, layer: Project["layer"], pageTrees: PageTrees[]): Project {
   const nodes: Record<string, CuiNode> = {};
+  const rootIds: string[] = [];
+  const pages: CuiPage[] = [];
+
   const add = (t: Tree, parentId: string | null) => {
     t.n.parentId = parentId;
     nodes[t.n.id] = t.n;
@@ -124,8 +137,26 @@ function build(name: string, layer: Project["layer"], trees: Tree[]): Project {
       add(k, t.n.id);
     }
   };
-  trees.forEach((t) => add(t, null));
-  return { name, layer, nodes, rootIds: trees.map((t) => t.n.id) };
+
+  for (const def of pageTrees) {
+    const page = newPage(def.name);
+    pages.push(page);
+    for (const t of def.trees) {
+      t.n.pageId = page.id;
+      add(t, null);
+      rootIds.push(t.n.id);
+    }
+  }
+
+  return {
+    name,
+    layer,
+    nodes,
+    rootIds,
+    pages,
+    entryPageId: pages[0]?.id ?? null,
+    commandPrefix: derivePrefix(name),
+  };
 }
 
 const img = (color: Color, extra: Record<string, FieldValue> = {}) =>
@@ -133,8 +164,28 @@ const img = (color: Color, extra: Record<string, FieldValue> = {}) =>
 const txt = (text: string, fontSize: number, align: string, color: Color = [1, 1, 1, 1], extra: Record<string, FieldValue> = {}) =>
   component("UnityEngine.UI.Text", { text, fontSize, align, color, ...extra });
 
+const button = (
+  name: string,
+  rect: RectTransform,
+  label: string,
+  color: Color,
+  extra: Partial<CuiNode> = {},
+): Tree => ({
+  n: node(name, rect, [component("UnityEngine.UI.Button", { color })], extra),
+  kids: [{ n: node(`${name}.Text`, anchored([0, 0], [1, 1]), [txt(label, 14, "MiddleCenter")]) }],
+});
+
 export function blankProject(): Project {
-  return { name: "Untitled UI", layer: "Overlay", nodes: {}, rootIds: [] };
+  const page = newPage(DEFAULT_PAGE_NAME);
+  return {
+    name: "Untitled UI",
+    layer: "Overlay",
+    nodes: {},
+    rootIds: [],
+    pages: [page],
+    entryPageId: page.id,
+    commandPrefix: derivePrefix("Untitled UI"),
+  };
 }
 
 export function shopTemplate(): Project {
@@ -266,8 +317,80 @@ export function hudTemplate(): Project {
   ]);
 }
 
+export function tabsTemplate(): Project {
+  const backdrop = (name: string, color: Color): Tree => ({
+    n: node(name, anchored([0, 0], [1, 1]), [
+      img(color, { material: "assets/content/ui/uibackgroundblur-ingamemenu.mat" }),
+      component("NeedsCursor"),
+    ]),
+  });
+
+  return buildPages("Tabbed UI", "Overlay", [
+    {
+      name: "Home",
+      trees: [
+        {
+          ...backdrop("Home", c(0, 0, 0, 0.55)),
+          kids: [
+            {
+              n: node("Home.Window", centered(520, 320), [img(c(0.11, 0.11, 0.1, 0.96))]),
+              kids: [
+                { n: node("Home.Title", anchored([0, 0.8], [1, 1], [16, 0], [-16, 0]), [txt("<b>MENU</b>", 22, "MiddleLeft")]) },
+                {
+                  n: node("Home.Body", anchored([0.06, 0.42], [0.94, 0.76]), [
+                    txt("Home screen. Use the button below to switch to the shop page.", 14, "MiddleCenter", c(0.8, 0.78, 0.74, 1)),
+                  ]),
+                },
+                button("Home.OpenShop", anchored([0.3, 0.14], [0.7, 0.3]), "OPEN SHOP", c(0.45, 0.55, 0.22, 0.95), {
+                  action: { type: "show", page: "Shop" },
+                }),
+                button("Home.Close", anchored([0.82, 0.86], [0.95, 0.96]), "✕", c(0, 0, 0, 0.35), {
+                  action: { type: "closeSelf" },
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Shop",
+      trees: [
+        {
+          ...backdrop("ShopPage", c(0, 0, 0, 0.65)),
+          kids: [
+            {
+              n: node("ShopPage.Window", centered(520, 320), [img(c(0.1, 0.12, 0.11, 0.97))]),
+              kids: [
+                { n: node("ShopPage.Title", anchored([0, 0.8], [1, 1], [16, 0], [-16, 0]), [txt("<b>SHOP</b>", 22, "MiddleLeft")]) },
+                {
+                  n: node("ShopPage.Body", anchored([0.06, 0.42], [0.94, 0.76]), [
+                    txt("Second page. Same window, different content.", 14, "MiddleCenter", c(0.8, 0.78, 0.74, 1)),
+                  ]),
+                },
+                button("ShopPage.Back", anchored([0.3, 0.14], [0.7, 0.3]), "BACK", c(0.29, 0.6, 0.85, 0.95), {
+                  action: { type: "show", page: "Home" },
+                }),
+                button("ShopPage.Close", anchored([0.82, 0.86], [0.95, 0.96]), "✕", c(0, 0, 0, 0.35), {
+                  action: { type: "closeSelf" },
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]);
+}
+
 export const TEMPLATES = [
   { id: "blank", label: "Blank", description: "Empty canvas", create: blankProject },
   { id: "shop", label: "Shop window", description: "Modal with item grid, buttons and blur", create: shopTemplate },
   { id: "hud", label: "Status HUD", description: "Server info panel and event countdown", create: hudTemplate },
+  {
+    id: "tabs",
+    label: "Tabbed pages",
+    description: "Two pages with buttons that switch between them",
+    create: tabsTemplate,
+  },
 ] as const;

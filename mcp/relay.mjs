@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RustCUI Editor relay — remote MCP endpoint for claude.ai connectors.
+ * RustCuiTool relay — remote MCP endpoint for claude.ai connectors.
  *
  *   claude.ai  ──(Streamable HTTP)──▶  /mcp/<token>
  *                                         │ forwards tool calls
@@ -38,7 +38,7 @@ function linkFor(token) {
       for (const [t, l] of links) if (!l.connected && l.pending.size === 0) links.delete(t);
     }
     link = new EditorLink(
-      "RustCUI Editor is not connected to this relay. Ask the user to open the editor, go to the AI tab → MCP bridge, " +
+      "RustCuiTool is not connected to this relay. Ask the user to open the editor, go to the AI tab → MCP bridge, " +
         "choose Remote and enable it (the connector URL shown there must match this one).",
     );
     links.set(token, link);

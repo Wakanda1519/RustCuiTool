@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (pages, interactions, preview).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 import {
   Check,
   Info,
@@ -10,7 +14,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { memo, type CSSProperties, type ReactNode } from "react";
+import { useItemIcon } from "@/lib/assets/items";
 import type { Color, CuiComponent, CuiNode } from "@/lib/cui/types";
+import { useLang } from "@/lib/i18n/useT";
 import { renderRichText } from "./richText";
 
 export const rgba = (c: Color) =>
@@ -52,6 +58,14 @@ function Placeholder({ icon: Icon, label, color }: { icon: LucideIcon; label?: s
   );
 }
 
+/** Real item icon from the configured Bundles/items folder, or the old placeholder. */
+function ItemSprite({ itemId, color }: { itemId: number; color: string }) {
+  const url = useItemIcon(itemId);
+  if (!url) return <Placeholder icon={Package} label={`#${itemId}`} color={color} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt="" draggable={false} className="size-full object-fill" />;
+}
+
 /** Visual for an Image/Button background, honoring well-known Rust sprites and materials. */
 function imageLayer(c: CuiComponent, style: CSSProperties): ReactNode {
   const color = rgba(c.props.color as Color);
@@ -63,7 +77,7 @@ function imageLayer(c: CuiComponent, style: CSSProperties): ReactNode {
   if (material.includes("uibackgroundblur")) {
     style.backdropFilter = `blur(${material.includes("ingamemenu") ? 12 : 6}px)`;
   }
-  if (itemId) return <Placeholder icon={Package} label={`#${itemId}`} color={color} />;
+  if (itemId) return <ItemSprite itemId={itemId} color={color} />;
   if (png) return <Placeholder icon={ImageIcon} label="png" color={color} />;
 
   const Icon = ICON_SPRITES[sprite];
@@ -117,7 +131,18 @@ function textLayer(c: CuiComponent, countdown?: CuiComponent): ReactNode {
   );
 }
 
-export const NodeView = memo(function NodeView({ node, css }: { node: CuiNode; css: CSSProperties }) {
+export const NodeView = memo(function NodeView({
+  node,
+  css,
+  interactive,
+  onActivate,
+}: {
+  node: CuiNode;
+  css: CSSProperties;
+  interactive?: boolean;
+  onActivate?: () => void;
+}) {
+  const lang = useLang();
   const style: CSSProperties = { position: "absolute", ...css };
   let content: ReactNode = null;
   const byType = (t: CuiComponent["type"]) => node.components.find((c) => c.type === t);
@@ -142,7 +167,7 @@ export const NodeView = memo(function NodeView({ node, css }: { node: CuiNode; c
           style={{ opacity: (raw.props.color as Color)[3] }}
         />
       );
-    } else if (raw.props.steamId) content = <Placeholder icon={User} label="avatar" color={color} />;
+    } else if (raw.props.steamId) content = <Placeholder icon={User} label={lang === "ru" ? "аватар" : "avatar"} color={color} />;
     else if (raw.props.png) content = <Placeholder icon={ImageIcon} label="png" color={color} />;
     else style.backgroundColor = color;
   }
@@ -150,7 +175,19 @@ export const NodeView = memo(function NodeView({ node, css }: { node: CuiNode; c
   if (outline) style.filter = outlineFilter(outline);
 
   return (
-    <div style={style} data-node={node.id}>
+    <div
+      style={style}
+      data-node={node.id}
+      className={interactive ? "cursor-pointer transition hover:brightness-110" : undefined}
+      onClick={
+        onActivate
+          ? (e) => {
+              e.stopPropagation();
+              onActivate();
+            }
+          : undefined
+      }
+    >
       {content}
     </div>
   );

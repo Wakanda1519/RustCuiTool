@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RustCuiTool</RootNamespace>
+    <AssemblyName>RCT</AssemblyName>
+    <ApplicationIcon>..\icon.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+
+    <AssemblyTitle>RustCuiTool</AssemblyTitle>
+    <Product>RustCuiTool</Product>
+    <Company>hammzat and RustCuiTool fork contributors</Company>
+    <Description>RustCuiTool — visual editor for Rust (Oxide / Carbon) CUI interfaces</Description>
+    <Version>2.0.0</Version>
+    <FileVersion>2.0.0.0</FileVersion>
+    <InformationalVersion>2.0.0</InformationalVersion>
+    <Copyright>GPL-3.0-only</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\build\app.zip" LogicalName="RustCuiTool.app.zip" />
+    <EmbeddedResource Include="..\icon.ico" LogicalName="RustCuiTool.icon.ico" />
+  </ItemGroup>
+
+</Project>

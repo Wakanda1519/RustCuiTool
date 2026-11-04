@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import type { BetaContentBlockParam, BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
@@ -6,6 +10,7 @@ import { persist } from "zustand/middleware";
 import { describeError, MODELS, runAgent, type Effort, type ModelId } from "@/lib/ai/agent";
 import { storeHost } from "@/lib/ai/host";
 import { useEditor } from "@/store/editor";
+import { useI18n } from "@/store/i18n";
 
 export const CONTEXT_TAG = "<editor_state>";
 
@@ -82,7 +87,7 @@ export const useAi = create<AiState>()(
             { onUpdate: (m, streaming) => set({ messages: [...m], streaming }) },
           );
         } catch (e) {
-          if (!controller?.signal.aborted) set({ error: describeError(e) });
+          if (!controller?.signal.aborted) set({ error: describeError(e, useI18n.getState().lang) });
         } finally {
           controller = null;
           set({ running: false, streaming: null });

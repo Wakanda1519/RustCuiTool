@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   BetaContentBlock,
@@ -7,6 +11,7 @@ import type {
   BetaToolUseBlock,
   BetaMessageStreamParams,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import { translate, type Lang } from "@/lib/i18n/dictionary";
 import { AI_INSTRUCTIONS, runTool, TOOL_DEFS, type EditorHost } from "./executor";
 
 export const MODELS = [
@@ -145,11 +150,13 @@ export async function runAgent(messages: BetaMessageParam[], opts: AgentOptions,
   throw new Error(`Stopped after ${MAX_STEPS} steps.`);
 }
 
-export function describeError(err: unknown): string {
-  if (err instanceof Anthropic.AuthenticationError) return "Invalid API key.";
-  if (err instanceof Anthropic.PermissionDeniedError) return "This API key has no access to the selected model.";
-  if (err instanceof Anthropic.RateLimitError) return "Rate limited — wait a moment and try again.";
-  if (err instanceof Anthropic.APIConnectionError) return "Network error — check your connection.";
-  if (err instanceof Anthropic.APIError) return `API error ${err.status ?? ""}: ${err.message}`;
+export function describeError(err: unknown, lang: Lang = "en"): string {
+  if (err instanceof Anthropic.AuthenticationError) return translate(lang, "ai.error.invalidKey");
+  if (err instanceof Anthropic.PermissionDeniedError) return translate(lang, "ai.error.noAccess");
+  if (err instanceof Anthropic.RateLimitError) return translate(lang, "ai.error.rateLimit");
+  if (err instanceof Anthropic.APIConnectionError) return translate(lang, "ai.error.network");
+  if (err instanceof Anthropic.APIError) {
+    return translate(lang, "ai.error.api", { status: err.status ?? "", message: err.message });
+  }
   return (err as Error)?.message ?? String(err);
 }

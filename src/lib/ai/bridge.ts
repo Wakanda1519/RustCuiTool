@@ -1,7 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { translate } from "@/lib/i18n/dictionary";
+import { useI18n } from "@/store/i18n";
 import { useUi } from "@/store/ui";
 import { runTool, type ToolOutput } from "./executor";
 import { storeHost } from "./host";
@@ -90,7 +96,12 @@ function connect() {
   ws.onopen = () => {
     useBridge.setState({ status: "connected" });
     ws.send(JSON.stringify({ type: "hello", app: "rustcui-editor", version: 2 }));
-    useUi.getState().notify(state.mode === "remote" ? "Connected to relay" : "MCP bridge connected");
+    useUi.getState().notify(
+      translate(
+        useI18n.getState().lang,
+        state.mode === "remote" ? "bridge.connectedRemote" : "bridge.connectedLocal",
+      ),
+    );
   };
   ws.onmessage = (ev) => {
     let msg: { type?: string; id?: string; name?: string; input?: unknown };

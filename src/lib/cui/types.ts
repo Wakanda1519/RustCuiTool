@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (pages, interactions, preview).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 /**
  * Data model for Rust CUI (Community UI) documents.
  *
@@ -63,6 +67,45 @@ export interface CuiComponent {
   props: Record<string, FieldValue>;
 }
 
+export const ACTION_KINDS = ["show", "hide", "toggle", "closeSelf", "destroy", "command"] as const;
+export type ActionKind = (typeof ACTION_KINDS)[number];
+
+/**
+ * Editor-level interaction attached to an element. It is not part of raw CUI:
+ * the exporters compile it into a Button `command`/`close` and, for page
+ * routing, into a small command router in the generated plugin.
+ */
+export interface CuiAction {
+  type: ActionKind;
+  /** Target page name for show / hide / toggle. */
+  page?: string;
+  /** Element name for destroy. */
+  target?: string;
+  /** Raw console command for command. */
+  value?: string;
+}
+
+/** A screen / view: a named group of top-level elements. */
+export interface CuiPage {
+  id: string;
+  name: string;
+}
+
+/**
+ * Editor-only layout group: direct children are placed in a row/column with
+ * equal spacing and a shared cell size. Rect transforms are kept in sync, so
+ * the exported result matches the canvas.
+ */
+export interface CuiLayout {
+  direction: "horizontal" | "vertical";
+  /** Gap between elements, in Rust reference pixels. */
+  spacing: number;
+  /** Space around the contents, in Rust reference pixels. */
+  padding: number;
+  /** Size shared by every child, in Rust reference pixels. */
+  cell: Vec2;
+}
+
 export interface CuiNode {
   id: string;
   name: string;
@@ -73,6 +116,12 @@ export interface CuiNode {
   fadeOut: number;
   destroyUi: string;
   update: boolean;
+  /** Page this root element belongs to. Only meaningful for roots. */
+  pageId?: string;
+  /** Optional interaction, compiled by the exporters and the preview simulator. */
+  action?: CuiAction;
+  /** Editor-only auto-layout for the direct children. */
+  layout?: CuiLayout;
   /** Editor-only flags, never exported. */
   hidden?: boolean;
   locked?: boolean;
@@ -85,6 +134,12 @@ export interface Project {
   layer: Layer;
   nodes: Record<string, CuiNode>;
   rootIds: string[];
+  /** Screens the project is split into. Always contains at least one page. */
+  pages: CuiPage[];
+  /** Page shown first by the generated plugin. */
+  entryPageId: string | null;
+  /** Console command prefix used by generated actions, e.g. "shop" → "shop.page". */
+  commandPrefix: string;
 }
 
 /** A single element in the JSON accepted by `CuiHelper.AddUi`. */

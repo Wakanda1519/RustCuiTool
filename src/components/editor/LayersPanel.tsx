@@ -1,12 +1,20 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (pages, interactions, preview).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import clsx from "clsx";
 import { ChevronRight, Eye, EyeOff, Layers, Lock, Plus } from "lucide-react";
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { PRESET_LABELS, type PresetKind } from "@/lib/cui/factory";
+import { resolvePageId } from "@/lib/cui/pages";
+import { presetLabel } from "@/lib/i18n/cui";
+import { useLang, useT } from "@/lib/i18n/useT";
 import { useEditor } from "@/store/editor";
 import { Button, MenuItem, Popover } from "@/components/ui/primitives";
 import { nodeIcon, PRESET_ICONS } from "./icons";
+import { PagesBar } from "./PagesBar";
 
 type Zone = "before" | "inside" | "after";
 const PRESETS = Object.keys(PRESET_LABELS) as PresetKind[];
@@ -14,11 +22,19 @@ const QUICK: PresetKind[] = ["panel", "text", "button", "image", "input"];
 
 export function LayersPanel() {
   const project = useEditor((s) => s.project);
+  const view = useEditor((s) => s.view);
   const addPreset = useEditor((s) => s.addPreset);
   const moveNode = useEditor((s) => s.moveNode);
   const selectedId = useEditor((s) => s.selectedId);
+  const t = useT();
+  const lang = useLang();
   const [drop, setDrop] = useState<{ id: string; zone: Zone } | null>(null);
   const dragIdRef = useRef<string | null>(null);
+  const pageId = resolvePageId(project, view.pageId);
+  const pageRoots = useMemo(
+    () => project.rootIds.filter((id) => resolvePageId(project, project.nodes[id]?.pageId) === pageId),
+    [project, pageId],
+  );
 
   const onDrop = () => {
     const src = dragIdRef.current;
@@ -39,12 +55,12 @@ export function LayersPanel() {
     <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel">
       <div className="flex h-10 items-center justify-between border-b border-line pr-1.5 pl-3">
         <h2 className="flex items-center gap-2 text-[12px] font-semibold tracking-wide">
-          <Layers className="size-3.5 text-muted" /> Elements
+          <Layers className="size-3.5 text-muted" /> {t("layers.title")}
         </h2>
         <Popover
           align="right"
           trigger={({ toggle }) => (
-            <Button size="sm" variant="ghost" onClick={toggle} title="Add element">
+            <Button size="sm" variant="ghost" onClick={toggle} title={t("layers.addElement")}>
               <Plus className="size-4" />
             </Button>
           )}
@@ -52,7 +68,9 @@ export function LayersPanel() {
           {(close) => (
             <>
               <p className="px-2.5 pt-1 pb-1.5 text-[11px] text-faint">
-                {selectedId ? `Adds inside “${project.nodes[selectedId]?.name}”` : "Adds at the root"}
+                {selectedId
+                  ? t("layers.addInside", { name: project.nodes[selectedId]?.name ?? "" })
+                  : t("layers.addAtRoot")}
               </p>
               {PRESETS.map((k) => {
                 const Icon = PRESET_ICONS[k];
@@ -65,7 +83,7 @@ export function LayersPanel() {
                       close();
                     }}
                   >
-                    {PRESET_LABELS[k]}
+                    {presetLabel(k, lang)}
                   </MenuItem>
                 );
               })}
@@ -73,6 +91,8 @@ export function LayersPanel() {
           )}
         </Popover>
       </div>
+
+      <PagesBar />
 
       <div className="flex gap-1 border-b border-line px-2 py-1.5">
         {QUICK.map((k) => {
@@ -82,11 +102,11 @@ export function LayersPanel() {
               key={k}
               type="button"
               onClick={() => addPreset(k)}
-              title={`Add ${PRESET_LABELS[k]}${selectedId ? " inside selection" : ""}`}
+              title={`${t("layers.addElement")}: ${presetLabel(k, lang)}`}
               className="flex h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-muted transition hover:bg-white/6 hover:text-fg"
             >
               <Icon className="size-4" />
-              <span className="text-[9.5px]">{PRESET_LABELS[k]}</span>
+              <span className="text-[9.5px]">{presetLabel(k, lang)}</span>
             </button>
           );
         })}
@@ -98,14 +118,14 @@ export function LayersPanel() {
         onDrop={onDrop}
         onPointerDown={(e) => e.target === e.currentTarget && useEditor.getState().select(null)}
       >
-        {project.rootIds.length === 0 && (
+        {pageRoots.length === 0 && (
           <div className="mx-3 mt-6 rounded-xl border border-dashed border-line-strong p-4 text-center text-[12px] leading-relaxed text-muted">
-            Nothing here yet.
+            {t("layers.emptyTitle")}
             <br />
-            Add a <b className="text-fg">Panel</b> to get started.
+            {t("layers.emptyHint")}
           </div>
         )}
-        {project.rootIds.map((id) => (
+        {pageRoots.map((id) => (
           <TreeRow key={id} id={id} depth={0} drop={drop} setDrop={setDrop} dragIdRef={dragIdRef} />
         ))}
         <div
@@ -126,7 +146,7 @@ export function LayersPanel() {
             if (src) moveNode(src, null, project.rootIds.length);
           }}
         >
-          Move to root
+          {t("layers.moveToRoot")}
         </div>
       </div>
     </aside>
@@ -147,11 +167,12 @@ function TreeRow({
   dragIdRef: React.RefObject<string | null>;
 }) {
   const node = useEditor((s) => s.project.nodes[id]);
-  const selected = useEditor((s) => s.selectedId === id);
+  const selected = useEditor((s) => s.selectedIds.includes(id));
   const hovered = useEditor((s) => s.hoveredId === id);
   const [editing, setEditing] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
   const s = useEditor.getState();
+  const t = useT();
 
   useEffect(() => {
     if (selected) rowRef.current?.scrollIntoView({ block: "nearest" });
@@ -183,7 +204,7 @@ function TreeRow({
           const t = (e.clientY - r.top) / r.height;
           setDrop({ id, zone: t < 0.28 ? "before" : t > 0.72 ? "after" : "inside" });
         }}
-        onClick={() => s.select(id)}
+        onClick={(e) => s.select(id, e.ctrlKey || e.metaKey)}
         onDoubleClick={() => setEditing(true)}
         onPointerEnter={() => s.hover(id)}
         onPointerLeave={() => s.hover(null)}
@@ -234,7 +255,7 @@ function TreeRow({
         {node.locked && <Lock className="size-3 text-amber/80" />}
         <button
           type="button"
-          title={node.hidden ? "Show" : "Hide"}
+          title={node.hidden ? t("layers.show") : t("layers.hide")}
           onClick={(e) => {
             e.stopPropagation();
             s.toggleFlag(id, "hidden");

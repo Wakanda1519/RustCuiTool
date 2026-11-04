@@ -1,20 +1,27 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * RustCuiTool — modified 2026-11-04 (localization).
+ * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
+ */
 "use client";
 
 import clsx from "clsx";
 import { Cable, Check, ChevronRight, Copy, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { connectorUrl, useBridge, type BridgeMode } from "@/lib/ai/bridge";
+import type { TKey } from "@/lib/i18n/dictionary";
+import { useT } from "@/lib/i18n/useT";
 import { Button, Segmented, Switch } from "@/components/ui/primitives";
 
-const STATUS: Record<string, { label: string; dot: string }> = {
-  off: { label: "Off", dot: "bg-faint" },
-  connecting: { label: "Connecting…", dot: "bg-amber animate-pulse" },
-  connected: { label: "Connected", dot: "bg-good" },
-  error: { label: "Waiting for server…", dot: "bg-amber animate-pulse" },
+const STATUS: Record<string, { key: TKey; dot: string }> = {
+  off: { key: "bridge.off", dot: "bg-faint" },
+  connecting: { key: "bridge.connecting", dot: "bg-amber animate-pulse" },
+  connected: { key: "bridge.connected", dot: "bg-good" },
+  error: { key: "bridge.waiting", dot: "bg-amber animate-pulse" },
 };
 
 function CopyBox({ text, placeholder }: { text: string; placeholder?: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   return (
     <div className="relative">
       <pre className="overflow-x-auto rounded-lg bg-black/40 p-2 pr-8 font-mono text-[10.5px] break-all whitespace-pre-wrap text-fg/80">
@@ -23,7 +30,7 @@ function CopyBox({ text, placeholder }: { text: string; placeholder?: string }) 
       {text && (
         <button
           type="button"
-          title="Copy"
+          title={t("common.copy")}
           onClick={async () => {
             await navigator.clipboard.writeText(text);
             setCopied(true);
@@ -43,8 +50,9 @@ export function BridgeSection() {
   const { enabled, mode, port, relayUrl, status, calls, lastCall, setEnabled, configure, rotateToken } = bridge;
   const [open, setOpen] = useState(false);
   const [relayDraft, setRelayDraft] = useState(relayUrl);
-  const st = STATUS[status];
+  const st = STATUS[status] ?? STATUS.off;
   const connector = connectorUrl(bridge);
+  const t = useT();
 
   return (
     <div className="border-t border-line">
@@ -52,15 +60,15 @@ export function BridgeSection() {
         <button type="button" onClick={() => setOpen((o) => !o)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <ChevronRight className={clsx("size-3.5 text-faint transition", open && "rotate-90")} />
           <Cable className="size-3.5 text-muted" />
-          <span className="text-[12px] font-semibold">MCP bridge</span>
+          <span className="text-[12px] font-semibold">{t("bridge.title")}</span>
           <span className="flex items-center gap-1.5 truncate text-[11px] text-faint">
             <span className={clsx("size-1.5 rounded-full", st.dot)} />
-            {enabled ? (mode === "remote" ? "Remote · " : "Local · ") : ""}
-            {st.label}
-            {status === "connected" && calls > 0 && <span>· {calls} calls</span>}
+            {enabled ? `${mode === "remote" ? t("bridge.remote") : t("bridge.local")} · ` : ""}
+            {t(st.key)}
+            {status === "connected" && calls > 0 && <span>· {t("bridge.calls", { count: calls })}</span>}
           </span>
         </button>
-        <Switch checked={enabled} onChange={setEnabled} label="Enable MCP bridge" />
+        <Switch checked={enabled} onChange={setEnabled} label={t("bridge.enable")} />
       </div>
       {open && (
         <div className="max-h-[50dvh] space-y-2.5 overflow-y-auto px-3 pb-3 text-[11.5px] leading-relaxed text-muted">
@@ -69,20 +77,21 @@ export function BridgeSection() {
             value={mode}
             onChange={(m) => configure({ mode: m as BridgeMode })}
             options={[
-              { value: "local", label: "Local", title: "Claude Code / Claude Desktop on this machine" },
-              { value: "remote", label: "Remote · claude.ai", title: "claude.ai custom connector via the relay" },
+              { value: "local", label: t("bridge.local"), title: t("bridge.localTitle") },
+              { value: "remote", label: `${t("bridge.remote")} · claude.ai`, title: t("bridge.remoteTitle") },
             ]}
           />
 
           {mode === "local" ? (
             <>
-              <p>Run the MCP server from the repo, then enable the bridge.</p>
-              <CopyBox text="claude mcp add rustcui-editor -- node /path/to/RustCUI-Editor/mcp/rustcui-mcp.mjs" />
+              <p>{t("bridge.localHelp")}</p>
+              <CopyBox text="claude mcp add rustcui-editor -- node /path/to/RustCuiTool/mcp/rustcui-mcp.mjs" />
               <p className="text-faint">
-                In this repo Claude Code picks it up automatically from <code className="text-muted">.mcp.json</code>.
+                {t("bridge.autoPickupBefore")} <code className="text-muted">.mcp.json</code>
+                {t("bridge.autoPickupAfter")}
               </p>
               <label className="flex items-center justify-between gap-2">
-                Port
+                {t("bridge.port")}
                 <input
                   type="number"
                   value={port}
@@ -95,41 +104,48 @@ export function BridgeSection() {
             <>
               <ol className="list-decimal space-y-1 pl-4">
                 <li>
-                  Run the relay (<code className="text-muted">npm run relay</code>) somewhere reachable over HTTPS — see
-                  README.
+                  {t("bridge.remoteHelp1")} (<code className="text-muted">npm run relay</code>){" "}
+                  {t("bridge.remoteHelp1After")}
                 </li>
-                <li>Paste its URL below and enable the bridge.</li>
+                <li>{t("bridge.remoteHelp2")}</li>
                 <li>
-                  In claude.ai: <span className="text-fg/80">Settings → Connectors → Add custom connector</span>, paste
-                  the connector URL.
+                  {t("bridge.remoteHelp3Before")}{" "}
+                  <span className="text-fg/80">{t("bridge.remoteHelp3Action")}</span>
+                  {t("bridge.remoteHelp3After")}
                 </li>
               </ol>
               <label className="block">
-                <span className="mb-1 block text-[11px]">Relay URL</span>
+                <span className="mb-1 block text-[11px]">{t("bridge.relayUrl")}</span>
                 <input
                   value={relayDraft}
                   onChange={(e) => setRelayDraft(e.target.value)}
                   onBlur={() => relayDraft !== relayUrl && configure({ relayUrl: relayDraft.trim() })}
                   onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                  placeholder="https://your-relay.example.com"
+                  placeholder={t("bridge.placeholderRelay")}
                   className="h-7 w-full rounded-md border border-line bg-black/30 px-2 font-mono text-[11px] outline-none focus:border-rust/60"
                   spellCheck={false}
                 />
               </label>
               <div>
                 <span className="mb-1 flex items-center justify-between text-[11px]">
-                  Connector URL <span className="text-faint">keep it private</span>
+                  {t("bridge.connectorUrl")} <span className="text-faint">{t("bridge.keepPrivate")}</span>
                 </span>
-                <CopyBox text={connector} placeholder="Set the relay URL first" />
+                <CopyBox text={connector} placeholder={t("bridge.placeholderConnector")} />
               </div>
-              <Button size="sm" variant="ghost" className="border border-line" onClick={rotateToken} title="Invalidate the old connector URL">
-                <RefreshCw className="size-3" /> New pairing token
+              <Button
+                size="sm"
+                variant="ghost"
+                className="border border-line"
+                onClick={rotateToken}
+                title={t("bridge.newTokenTitle")}
+              >
+                <RefreshCw className="size-3" /> {t("bridge.newToken")}
               </Button>
             </>
           )}
           {lastCall && (
             <p className="font-mono text-[10.5px] text-faint">
-              last: {lastCall.name} {lastCall.ok ? "✓" : "✗"}
+              {t("bridge.lastCall", { name: lastCall.name, ok: lastCall.ok ? "✓" : "✗" })}
             </p>
           )}
         </div>
