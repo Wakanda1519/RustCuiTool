@@ -40,7 +40,7 @@
 
 * Windows 10+ x64
 * [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
-* Для сборки: Node.js 22+, npm, Rust 1.90+ и MSVC Build Tools (Visual Studio Build Tools с workload «Разработка классических приложений на C++»)
+* Для сборки: Node.js 22+, npm, Rust 1.90+ и MSVC Build Tools
 
 ### Готовый файл
 
