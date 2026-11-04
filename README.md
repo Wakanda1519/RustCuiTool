@@ -70,8 +70,6 @@ npm run start    # локальный сервер для ./out
 6. Экспортируйте JSON или C# и вставьте результат в плагин Oxide / Carbon.
 7. Для настоящих иконок предметов укажите папку `...\RustClient_Data\Bundles\items` на стартовом экране.
 
-<img width="1400" alt="Стартовый экран RustCuiTool" src="docs/screenshot-launcher.png" />
-
 Все настройки, сессия и профиль WebView2 лежат в `%LOCALAPPDATA%\RustCuiTool`. Удалите эту папку, чтобы полностью сбросить локальные данные.
 
 ## AI и MCP
