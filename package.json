@@ -1,6 +1,6 @@
 {
   "name": "rustcuitool",
-  "version": "2.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "RustCuiTool — visual editor for Rust (Oxide / Carbon) CUI interfaces",
   "license": "GPL-3.0-only",
@@ -17,9 +17,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "mcp": "node mcp/rustcui-mcp.mjs",
+    "mcp:build": "cargo build --release --manifest-path mcp-server/Cargo.toml",
     "relay": "node mcp/relay.mjs",
-    "desktop:dev": "next dev",
-    "desktop:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-exe.ps1"
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-exe.ps1",
+    "desktop:bundle": "tauri build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

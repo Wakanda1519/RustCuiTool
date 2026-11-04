@@ -47,6 +47,17 @@ This distribution adds, among other things:
 - A visual item picker for the inspector: search by display name, shortname
   or item ID, category filters, a grouped grid of items with thumbnails,
   lazy thumbnail loading, and an embedded Rust item catalog.
+- A single self-contained Windows build: the Rust + Tauri 2 host embeds the
+  static interface into one binary (RCT.exe), so no Node.js, .NET runtime or
+  side folders are needed — only the system WebView2 runtime is used.
+- A local MCP server for the editor: RCT-MCP.exe ships with the desktop
+  build and `npm run mcp` covers the browser build. It exposes the open
+  editor to Claude Desktop, Claude Code, Cursor, Kilo Code and other MCP
+  clients over a local WebSocket, with ready-made client configurations in
+  the app (AI → MCP bridge → Local).
+- Custom canvas backgrounds: upload or drop a screenshot to use it as a
+  background reference, replace or reset it, kept per tab and restored with
+  the project.
 
 All changed or added source files carry a header with
 `SPDX-License-Identifier: GPL-3.0-only`, the modification date and a note

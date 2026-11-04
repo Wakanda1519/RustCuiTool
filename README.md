@@ -4,13 +4,14 @@
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-1.90%2B-000000?style=flat-square&logo=rust&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?style=flat-square&logo=windows&logoColor=white)
 
 <img width="1400" height="900" alt="screenshot-launcher" src="https://github.com/user-attachments/assets/18f1f333-0880-4b1a-a93e-9f4fb3777180" />
 <img width="1936" height="1048" alt="screenshot-editor" src="https://github.com/user-attachments/assets/b63a1f53-840e-4726-bdcc-f3709ad7b42f" />
 
-## Особенности 
+## Особенности
 
 * **WYSIWYG-канвас.** Перетаскивание, изменение размера, умные направляющие, сетка, зум и опорное пространство 720p — так же, как UI масштабируется в Rust.
 * **Настоящие якоря и оффсеты.** Пресеты якорей в стиле Unity. Выбирайте, что меняет перетаскивание — *оффсеты* (пиксельная точность) или *якоря* (масштабирование под любой экран). При смене родителя элемент остаётся на месте.
@@ -28,10 +29,10 @@
 ## Ограничения
 
 * **`RCT.exe` работает только на Windows 10+ x64** и использует Microsoft Edge WebView2 Runtime.
-* **В `RCT.exe` нет встроенного Node.js.** MCP-сервер запускается отдельно командой `npm run mcp`, если нужен доступ из Claude Desktop, Claude Code, Cursor и других MCP-клиентов.
+* **В `RCT.exe` нет встроенного Node.js.** Рядом с ним поставляется `RCT-MCP.exe` — локальный MCP-сервер для Claude Desktop, Claude Code, Cursor, Kilo Code и других MCP-клиентов. Для браузерной сборки остаётся `npm run mcp`.
 * **AI-ассистент требует интернет и ключ Anthropic API.** Ключ хранится только локально в профиле WebView2 на вашей машине.
 * **Редактор создаёт UI, а не весь плагин.** На выходе — JSON для `CuiHelper.AddUi` и C#-код интерфейса; игровая логика плагина остаётся на вас.
-* **Linux и macOS** поддерживаются для браузерной сборки, но не для готового `RCT.exe`.
+* **Linux и macOS** поддерживаются для браузерной сборки; готовый `RCT.exe` собирается под Windows x64.
 
 ## Установка
 
@@ -39,11 +40,11 @@
 
 * Windows 10+ x64
 * [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
-* Для сборки: Node.js 22+, npm и .NET SDK 10
+* Для сборки: Node.js 22+, npm, Rust 1.90+ и MSVC Build Tools (Visual Studio Build Tools с workload «Разработка классических приложений на C++»)
 
 ### Готовый файл
 
-Возьмите **`RCT.exe`** из корня репозитория и запустите. Установка не требуется: интерфейс распакуется в `%LOCALAPPDATA%\RustCuiTool` при первом запуске.
+Возьмите **`RCT.exe`** и **`RCT-MCP.exe`** из корня репозитория и положите их в одну папку. Запустите `RCT.exe`. Установка не требуется: интерфейс встроен в бинарник, а настройки хранятся в `%LOCALAPPDATA%\com.rustcuitool.desktop`. `RCT-MCP.exe` нужен только для MCP-клиентов; MCP-клиент запускает его сам.
 
 ### Сборка
 
@@ -52,13 +53,18 @@ npm ci
 npm run desktop:build
 ```
 
-Скрипт соберёт статический экспорт, упакует его вместе с `icon.ico` и создаст `RCT.exe` в корне проекта. Отдельные команды:
+Скрипт соберёт статический экспорт, скомпилирует Rust-хост на Tauri 2 и `RCT-MCP.exe`, затем положит оба файла в корень проекта. Отдельные команды:
 
 ```bash
-npm run dev      # разработка на http://localhost:3000
-npm run build    # статический сайт в ./out
-npm run start    # локальный сервер для ./out
+npm run dev             # разработка на http://localhost:3000
+npm run desktop:dev     # десктопная разработка через Tauri
+npm run build           # статический сайт в ./out
+npm run desktop:build   # портативный RCT.exe в корне
+npm run desktop:bundle  # NSIS-инсталлятор в src-tauri/target/release/bundle
+npm run start           # локальный сервер для ./out
 ```
+
+Rust-хост находится в `src-tauri`: команды чтения/записи файлов, иконки, drag & drop, диалоги и открытие внешних ссылок. C#-оболочка WinForms больше не используется.
 
 ### Использование
 
@@ -70,19 +76,21 @@ npm run start    # локальный сервер для ./out
 6. Экспортируйте JSON или C# и вставьте результат в плагин Oxide / Carbon.
 7. Для настоящих иконок предметов укажите папку `...\RustClient_Data\Bundles\items` на стартовом экране.
 
-Все настройки, сессия и профиль WebView2 лежат в `%LOCALAPPDATA%\RustCuiTool`. Удалите эту папку, чтобы полностью сбросить локальные данные.
+<img width="1400" alt="Стартовый экран RustCuiTool" src="docs/screenshot-launcher.png" />
+
+Все настройки, сессия и профиль WebView2 лежат в `%LOCALAPPDATA%\com.rustcuitool.desktop`. Удалите эту папку, чтобы полностью сбросить локальные данные.
 
 ## AI и MCP
 
 **AI-ассистент** открывается по `Ctrl+K` на вкладке AI. Опишите интерфейс или приложите скриншот макета — Claude соберёт элементы на канвасе. Каждое изменение становится обычным шагом undo. Ключ Anthropic API вводится один раз и хранится локально.
 
-**MCP-сервер** позволяет управлять открытым редактором из Claude Code, Claude Desktop, Cursor и других MCP-клиентов:
+**MCP-сервер** позволяет управлять открытым редактором из Claude Code, Claude Desktop, Cursor, Kilo Code и других MCP-клиентов. В десктопной сборке используйте `RCT-MCP.exe`, который лежит рядом с `RCT.exe`:
 
-```bash
-npm run mcp
-```
+1. Положите `RCT.exe` и `RCT-MCP.exe` в одну папку.
+2. Запустите `RCT.exe` и включите **AI → MCP bridge** в режиме **Local**.
+3. Добавьте `RCT-MCP.exe` в MCP-клиент. Готовые инструкции для Kilo Code, Claude Code, Claude Desktop и Cursor есть прямо в приложении: **AI → MCP bridge → Local**.
 
-В редакторе включите **AI → MCP bridge**. Сервер передаёт вызовы инструментов по локальному WebSocket (`ws://127.0.0.1:7331`, порт меняется через `RUSTCUI_BRIDGE_PORT`). Для claude.ai есть отдельный relay:
+Сервер передаёт вызовы инструментов по локальному WebSocket (`ws://127.0.0.1:7331`, порт меняется через `RUSTCUI_BRIDGE_PORT`). MCP-клиент запускает `RCT-MCP.exe` сам, вручную его запускать не нужно. Для браузерной сборки остаётся `npm run mcp`. Для claude.ai есть отдельный relay:
 
 ```bash
 npm run relay
@@ -100,12 +108,12 @@ npm run relay
 <details>
   <summary><b>Где хранятся проекты и настройки?</b></summary>
   <br>
-  Проекты вы сохраняете сами в файлы <code>.rcui.json</code>. Сессия, недавние файлы, язык, настройки канваса и профиль WebView2 хранятся в <code>%LOCALAPPDATA%\RustCuiTool</code>. Автосохранение также дублирует состояние в localStorage внутри профиля.
+  Проекты вы сохраняете сами в файлы <code>.rcui.json</code>.   Сессия, недавние файлы, язык, настройки канваса и профиль WebView2 хранятся в <code>%LOCALAPPDATA%\com.rustcuitool.desktop</code>. Автосохранение также дублирует состояние в localStorage внутри профиля.
 </details>
 <details>
-  <summary><b>Почему RCT.exe весит около 51 МБ?</b></summary>
+  <summary><b>Сколько весит RCT.exe и что внутри?</b></summary>
   <br>
-  Внутри — самостоятельно упакованный .NET Runtime, загрузчик WebView2 и весь статический интерфейс приложения. Зато не нужен установщик, а рядом с exe не появляются DLL и папки.
+  Внутри — Rust-бинарник Tauri 2 со встроенным статическим интерфейсом приложения. Отдельный .NET Runtime не нужен, рядом с exe не появляются DLL и папки. Для работы используется системный Microsoft Edge WebView2 Runtime. `RCT-MCP.exe` — отдельный маленький Rust-бинарник (около 1,5 МБ) для MCP-клиентов; Node.js для него не требуется.
 </details>
 <details>
   <summary><b>Работает ли редактор без интернета?</b></summary>
@@ -130,12 +138,12 @@ npm run relay
 <details>
   <summary><b>Как обновить приложение?</b></summary>
   <br>
-  Замените старый <code>RCT.exe</code> новым. Проекты и настройки в <code>%LOCALAPPDATA%\RustCuiTool</code> сохранятся; при необходимости их можно удалить для чистого старта.
+  Замените старые <code>RCT.exe</code> и <code>RCT-MCP.exe</code> новыми. Проекты в файлах <code>.rcui.json</code> и настройки в <code>%LOCALAPPDATA%\com.rustcuitool.desktop</code> сохранятся; при необходимости папку можно удалить для чистого старта.
 </details>
 
 ## Стек
 
-Next.js 16 (App Router, static export) · React 19 · TypeScript · Tailwind CSS v4 · Zustand + Immer · Anthropic SDK · MCP SDK · Vitest · .NET 10 WinForms + WebView2.
+Next.js 16 (App Router, static export) · React 19 · TypeScript · Tailwind CSS v4 · Zustand + Immer · Anthropic SDK · MCP SDK · Vitest · Rust + Tauri 2 (WebView2).
 
 ## Авторы
 
