@@ -355,7 +355,13 @@ export async function handleBrowserFiles(files: FileList | File[]): Promise<void
   }
   if (image) {
     const reader = new FileReader();
-    reader.onload = () => useEditor.getState().setView({ backgroundImage: String(reader.result) });
+    reader.onload = () => {
+      const editor = useEditor.getState();
+      // Dropping a reference image on the start screen starts a new project with it.
+      if (editor.launcher) editor.newTab(blankProject());
+      useEditor.getState().setView({ backgroundImage: String(reader.result) });
+      useUi.getState().notify(translate(useI18n.getState().lang, "files.backgroundLoaded"));
+    };
     reader.readAsDataURL(image);
     return;
   }

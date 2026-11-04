@@ -15,6 +15,7 @@ import {
   FileUp,
   Keyboard,
   LayoutTemplate,
+  Loader2,
   TriangleAlert,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -56,6 +57,7 @@ function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const [plugin, setPlugin] = useState(false);
   const [jsonPage, setJsonPage] = useState("all");
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const multiPage = project.pages.length > 1 || hasActions(project);
   const pageValue = project.pages.some((p) => p.id === jsonPage) ? jsonPage : "all";
@@ -75,6 +77,26 @@ function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void })
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveTextFile(
+        tab === "json"
+          ? `${exportName}.json`
+          : `${plugin ? slug(project.name).replace(/[^\w]/g, "") || "MyUi" : slug(project.name)}.cs`,
+        code,
+        tab === "json"
+          ? { filters: jsonFilters(), type: "application/json" }
+          : { filters: csharpFilters(), type: "text/plain" },
+      );
+    } catch (e) {
+      useUi.getState().notify((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const errors = problems.filter((p) => p.level === "error");
@@ -107,20 +129,9 @@ function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void })
             </label>
           )}
           <div className="flex-1" />
-          <Button
-            onClick={() =>
-              void saveTextFile(
-                tab === "json"
-                  ? `${exportName}.json`
-                  : `${plugin ? slug(project.name).replace(/[^\w]/g, "") || "MyUi" : slug(project.name)}.cs`,
-                code,
-                tab === "json"
-                  ? { filters: jsonFilters(), type: "application/json" }
-                  : { filters: csharpFilters(), type: "text/plain" },
-              )
-            }
-          >
-            <Download className="size-3.5" /> {t("common.saveFile")}
+          <Button onClick={() => void save()} disabled={saving}>
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}{" "}
+            {saving ? t("common.saving") : t("common.saveFile")}
           </Button>
           <Button variant="primary" onClick={copy}>
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}{" "}

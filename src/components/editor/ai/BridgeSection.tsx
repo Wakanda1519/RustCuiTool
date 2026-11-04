@@ -5,12 +5,23 @@
 "use client";
 
 import clsx from "clsx";
-import { Cable, Check, ChevronRight, Copy, RefreshCw } from "lucide-react";
+import {
+  Cable,
+  ChevronRight,
+  FileCheck2,
+  FileX2,
+  FolderOpen,
+  RefreshCw,
+} from "lucide-react";
 import { useState } from "react";
 import { connectorUrl, useBridge, type BridgeMode } from "@/lib/ai/bridge";
+import { useMcpServerInfo } from "@/lib/ai/mcp-status";
 import type { TKey } from "@/lib/i18n/dictionary";
 import { useT } from "@/lib/i18n/useT";
+import { revealItem } from "@/lib/platform/desktop";
 import { Button, Segmented, Switch } from "@/components/ui/primitives";
+import { CopyBox } from "./CopyBox";
+import { McpGuide } from "./McpGuide";
 
 const STATUS: Record<string, { key: TKey; dot: string }> = {
   off: { key: "bridge.off", dot: "bg-faint" },
@@ -19,37 +30,12 @@ const STATUS: Record<string, { key: TKey; dot: string }> = {
   error: { key: "bridge.waiting", dot: "bg-amber animate-pulse" },
 };
 
-function CopyBox({ text, placeholder }: { text: string; placeholder?: string }) {
-  const [copied, setCopied] = useState(false);
-  const t = useT();
-  return (
-    <div className="relative">
-      <pre className="overflow-x-auto rounded-lg bg-black/40 p-2 pr-8 font-mono text-[10.5px] break-all whitespace-pre-wrap text-fg/80">
-        {text || <span className="text-faint">{placeholder}</span>}
-      </pre>
-      {text && (
-        <button
-          type="button"
-          title={t("common.copy")}
-          onClick={async () => {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          }}
-          className="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded text-faint hover:text-fg"
-        >
-          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function BridgeSection() {
   const bridge = useBridge();
   const { enabled, mode, port, relayUrl, status, calls, lastCall, setEnabled, configure, rotateToken } = bridge;
   const [open, setOpen] = useState(false);
   const [relayDraft, setRelayDraft] = useState(relayUrl);
+  const { desktop, info: mcp, checking, refresh: refreshMcp } = useMcpServerInfo();
   const st = STATUS[status] ?? STATUS.off;
   const connector = connectorUrl(bridge);
   const t = useT();
@@ -67,11 +53,23 @@ export function BridgeSection() {
             {t(st.key)}
             {status === "connected" && calls > 0 && <span>· {t("bridge.calls", { count: calls })}</span>}
           </span>
+          {desktop && mode === "local" && mcp && (
+            <span
+              title={mcp.exists ? t("bridge.serverFound") : t("bridge.serverMissing")}
+              className="grid size-4 shrink-0 place-items-center"
+            >
+              {mcp.exists ? (
+                <FileCheck2 className="size-3.5 text-good" />
+              ) : (
+                <FileX2 className="size-3.5 text-amber" />
+              )}
+            </span>
+          )}
         </button>
         <Switch checked={enabled} onChange={setEnabled} label={t("bridge.enable")} />
       </div>
       {open && (
-        <div className="max-h-[50dvh] space-y-2.5 overflow-y-auto px-3 pb-3 text-[11.5px] leading-relaxed text-muted">
+        <div className="max-h-[60dvh] space-y-2.5 overflow-y-auto px-3 pb-3 text-[11.5px] leading-relaxed text-muted">
           <Segmented
             className="w-full [&>button]:flex-1 [&>button]:justify-center"
             value={mode}
@@ -84,21 +82,79 @@ export function BridgeSection() {
 
           {mode === "local" ? (
             <>
-              <p>{t("bridge.localHelp")}</p>
-              <CopyBox text="claude mcp add rustcui-editor -- node /path/to/RustCuiTool/mcp/rustcui-mcp.mjs" />
-              <p className="text-faint">
-                {t("bridge.autoPickupBefore")} <code className="text-muted">.mcp.json</code>
-                {t("bridge.autoPickupAfter")}
-              </p>
-              <label className="flex items-center justify-between gap-2">
-                {t("bridge.port")}
-                <input
-                  type="number"
-                  value={port}
-                  onChange={(e) => configure({ port: Number(e.target.value) || 7331 })}
-                  className="h-6 w-20 rounded-md border border-line bg-black/30 px-1.5 text-right font-mono text-[11px] outline-none focus:border-rust/60"
-                />
-              </label>
+              {!desktop ? (
+                <p className="rounded-lg border border-line bg-black/15 p-2.5 text-[11px] leading-relaxed text-muted">
+                  {t("bridge.guideNoDesktop")}
+                </p>
+              ) : (
+                <>
+                  <div
+                    className={clsx(
+                      "rounded-lg border p-2.5",
+                      mcp?.exists ? "border-good/40 bg-good/10" : "border-amber/40 bg-amber/10",
+                    )}
+                  >
+                    <div className="flex items-center gap-2 text-[11.5px] font-medium text-fg/90">
+                      {mcp?.exists ? (
+                        <FileCheck2 className="size-4 shrink-0 text-good" />
+                      ) : (
+                        <FileX2 className="size-4 shrink-0 text-amber" />
+                      )}
+                      <span>
+                        {mcp === null
+                          ? t("bridge.serverChecking")
+                          : mcp.exists
+                            ? t("bridge.serverFound")
+                            : t("bridge.serverMissing")}
+                      </span>
+                    </div>
+                    {mcp?.path && (
+                      <p className="mt-1 break-all font-mono text-[10px] leading-relaxed text-faint">{mcp.path}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="border border-line"
+                        onClick={() => void refreshMcp()}
+                        disabled={checking}
+                      >
+                        <RefreshCw className={clsx("size-3", checking && "animate-spin")} />
+                        {t("bridge.serverRecheck")}
+                      </Button>
+                      {mcp?.exists && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="border border-line"
+                          onClick={() => void revealItem(mcp.path)}
+                        >
+                          <FolderOpen className="size-3" />
+                          {t("bridge.serverReveal")}
+                        </Button>
+                      )}
+                    </div>
+                    {mcp && !mcp.exists && (
+                      <p className="mt-1.5 text-[10.5px] leading-relaxed text-amber/90">
+                        {t("bridge.serverMissingHint")}
+                      </p>
+                    )}
+                  </div>
+
+                  <label className="flex items-center justify-between gap-2">
+                    {t("bridge.port")}
+                    <input
+                      type="number"
+                      value={port}
+                      onChange={(e) => configure({ port: Number(e.target.value) || 7331 })}
+                      className="h-6 w-20 rounded-md border border-line bg-black/30 px-1.5 text-right font-mono text-[11px] outline-none focus:border-rust/60"
+                    />
+                  </label>
+                  <p className="text-[10.5px] text-faint">{t("bridge.portHint")}</p>
+
+                  <McpGuide commandPath={mcp?.path ?? ""} port={port} />
+                </>
+              )}
             </>
           ) : (
             <>

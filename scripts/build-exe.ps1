@@ -2,13 +2,23 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $root = Split-Path -Parent $PSScriptRoot
-$outDir = Join-Path $root 'out'
-$hostDir = Join-Path $root 'desktop-host'
-$stageDir = Join-Path $hostDir '.stage'
-$buildDir = Join-Path $root 'build'
-$zipPath = Join-Path $buildDir 'app.zip'
-$publishDir = Join-Path $buildDir 'publish'
 $exePath = Join-Path $root 'RCT.exe'
+$builtExe = Join-Path $root 'src-tauri\target\release\RCT.exe'
+$mcpExePath = Join-Path $root 'RCT-MCP.exe'
+$mcpManifest = Join-Path $root 'mcp-server\Cargo.toml'
+$mcpBuiltExe = Join-Path $root 'mcp-server\target\release\RCT-MCP.exe'
+
+$cargo = (Get-Command cargo -ErrorAction SilentlyContinue).Source
+if (-not $cargo) {
+    $cargo = Join-Path $env:USERPROFILE '.cargo\bin\cargo.exe'
+}
+if (-not (Test-Path -LiteralPath $cargo)) { throw 'cargo not found. Install Rust 1.90+ and make sure cargo is on PATH.' }
+
+# Tauri's CLI spawns cargo itself, so make sure the directory is on PATH.
+$cargoDir = Split-Path -Parent $cargo
+if (($env:PATH -split ';') -notcontains $cargoDir) {
+    $env:PATH = "$cargoDir;$env:PATH"
+}
 
 Push-Location $root
 try {
@@ -18,44 +28,23 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
     }
 
-    Write-Host 'Building static export...'
-    $env:NEXT_PUBLIC_BASE_PATH = $null
-    & npm.cmd run build
-    if ($LASTEXITCODE -ne 0) { throw 'next build failed.' }
-    if (-not (Test-Path (Join-Path $outDir 'index.html'))) { throw 'Static export did not produce out/index.html.' }
+    Write-Host 'Building RCT-MCP.exe...'
+    & $cargo build --release --manifest-path $mcpManifest
+    if ($LASTEXITCODE -ne 0) { throw 'RCT-MCP build failed.' }
+    if (-not (Test-Path -LiteralPath $mcpBuiltExe)) { throw 'Cargo did not produce mcp-server\target\release\RCT-MCP.exe.' }
+    Copy-Item -LiteralPath $mcpBuiltExe -Destination $mcpExePath -Force
 
-    Write-Host 'Packing static export...'
-    if (Test-Path $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force }
-    New-Item -ItemType Directory -Path $stageDir | Out-Null
-    Get-ChildItem -LiteralPath $outDir -Force | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $stageDir -Recurse -Force
-    }
-    Set-Content -LiteralPath (Join-Path $stageDir 'build.txt') -Value ([DateTime]::UtcNow.ToString('o')) -Encoding ASCII
-
-    if (-not (Test-Path $buildDir)) { New-Item -ItemType Directory -Path $buildDir | Out-Null }
-    if (Test-Path $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::CreateFromDirectory(
-        $stageDir,
-        $zipPath,
-        [System.IO.Compression.CompressionLevel]::Optimal,
-        $false)
-
-    Write-Host 'Publishing single-file RCT.exe...'
-    $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-    $env:DOTNET_NOLOGO = '1'
-    if (Test-Path $publishDir) { Remove-Item -LiteralPath $publishDir -Recurse -Force }
-    & dotnet publish (Join-Path $hostDir 'RctHost.csproj') -c Release -o $publishDir --nologo
-    if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }
-
-    $builtExe = Join-Path $publishDir 'RCT.exe'
-    if (-not (Test-Path $builtExe)) { throw 'dotnet publish did not produce RCT.exe.' }
+    Write-Host 'Building RustCuiTool with Tauri...'
+    & npx.cmd tauri build --no-bundle
+    if ($LASTEXITCODE -ne 0) { throw 'tauri build failed.' }
+    if (-not (Test-Path -LiteralPath $builtExe)) { throw 'Tauri did not produce src-tauri\target\release\RCT.exe.' }
 
     Copy-Item -LiteralPath $builtExe -Destination $exePath -Force
     $sizeMb = [math]::Round((Get-Item -LiteralPath $exePath).Length / 1MB, 1)
+    $mcpSizeMb = [math]::Round((Get-Item -LiteralPath $mcpExePath).Length / 1MB, 1)
     Write-Host "Done: $exePath ($sizeMb MB)"
+    Write-Host "Done: $mcpExePath ($mcpSizeMb MB)"
 }
 finally {
-    if (Test-Path $stageDir) { Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue }
     Pop-Location
 }

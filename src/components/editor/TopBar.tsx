@@ -27,6 +27,7 @@ import {
   Square,
   Undo2,
   Upload,
+  X,
 } from "lucide-react";
 import { useRef } from "react";
 import { exportJson } from "@/lib/cui/serialize";
@@ -269,18 +270,46 @@ export function TopBar() {
                     style={{ background: b.css }}
                   />
                 ))}
-                <button
-                  type="button"
-                  title={t("topbar.uploadScreenshot")}
-                  onClick={() => bgRef.current?.click()}
-                  className={`grid h-9 place-items-center rounded-md bg-white/5 text-muted ring-1 transition hover:text-fg ${
-                    view.backgroundImage ? "ring-2 ring-rust-hi" : "ring-line-strong"
-                  }`}
-                  style={view.backgroundImage ? { backgroundImage: `url(${view.backgroundImage})`, backgroundSize: "cover" } : undefined}
-                >
-                  {!view.backgroundImage && <ImagePlus className="size-4" />}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    title={view.backgroundImage ? t("topbar.replaceImage") : t("topbar.uploadScreenshot")}
+                    onClick={() => bgRef.current?.click()}
+                    className={`grid h-9 w-full place-items-center rounded-md bg-white/5 text-muted ring-1 transition hover:text-fg ${
+                      view.backgroundImage ? "ring-2 ring-rust-hi" : "ring-line-strong"
+                    }`}
+                    style={
+                      view.backgroundImage
+                        ? {
+                            backgroundImage: `url(${view.backgroundImage})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }
+                        : undefined
+                    }
+                  >
+                    {!view.backgroundImage && <ImagePlus className="size-4" />}
+                  </button>
+                  {view.backgroundImage && (
+                    <button
+                      type="button"
+                      title={t("topbar.removeImage")}
+                      onClick={() => s.setView({ backgroundImage: null })}
+                      className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-black/85 text-white/75 ring-1 ring-line-strong transition hover:bg-rust hover:text-white"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  )}
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => bgRef.current?.click()}
+                className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-line-strong py-1.5 text-[11.5px] text-muted transition hover:border-rust/60 hover:text-fg"
+              >
+                <ImagePlus className="size-3.5" />
+                {view.backgroundImage ? t("topbar.replaceImage") : t("topbar.uploadImage")}
+              </button>
               <input
                 ref={bgRef}
                 type="file"

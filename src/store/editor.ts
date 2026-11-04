@@ -299,7 +299,7 @@ function resetDocument(s: EditorState) {
   s.dirty = false;
 }
 
-/** A new tab inherits global canvas preferences, but never the previous background. */
+/** A new tab inherits global canvas preferences, including a custom background image. */
 function viewForNewTab(current: ViewState): ViewState {
   return {
     ...DEFAULT_VIEW,
@@ -311,7 +311,7 @@ function viewForNewTab(current: ViewState): ViewState {
     dragMode: current.dragMode,
     hud: current.hud,
     background: current.background,
-    backgroundImage: null,
+    backgroundImage: current.backgroundImage,
   };
 }
 

@@ -65,6 +65,18 @@ export async function startupFile(): Promise<string | null> {
   return invoke<string | null>("startup_file");
 }
 
+export interface McpServerInfo {
+  path: string;
+  exists: boolean;
+}
+
+/** Locate RCT-MCP.exe next to the running RCT.exe. */
+export async function mcpServerInfo(): Promise<McpServerInfo> {
+  if (!isTauri()) return { path: "", exists: false };
+  const { invoke } = await core();
+  return invoke<McpServerInfo>("mcp_server_info");
+}
+
 export async function pickOpenFile(filters: FileFilter[]): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const result = await open({ multiple: false, directory: false, filters });

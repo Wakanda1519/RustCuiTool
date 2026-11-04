@@ -69,7 +69,7 @@ export class EditorLink {
 /** MCP server whose tools are executed by `link`. */
 export function createMcpServer(link) {
   const server = new Server(
-    { name: "rustcui-editor", version: "1.1.0" },
+    { name: "rustcui-editor", version: "1.0.1" },
     { capabilities: { tools: {} }, instructions: defs.instructions },
   );
   server.setRequestHandler(ListToolsRequestSchema, async () => ({

@@ -2,7 +2,7 @@
  * RustCuiTool вЂ” added 2026-11-04 (selection).
  * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
  */
-import type { ComponentType, Project } from "./types";
+import type { ComponentType, CuiNode, Project } from "./types";
 
 const CONTAINERS: ReadonlySet<ComponentType> = new Set<ComponentType>([
   "UnityEngine.UI.Image",
@@ -16,13 +16,27 @@ const CONTENT: ReadonlySet<ComponentType> = new Set<ComponentType>([
 ]);
 
 /**
- * A single click selects the control the user means to move, not the label on
- * top of it: content-only elements (Text / InputField) resolve to their
+ * A single click selects the control the user means to move, not its content:
+ * any element inside a Button (text, image, icon, nested group) resolves to that
+ * Button, so dragging never moves a picture inside a button by accident.
+ * Outside buttons, content-only elements (Text / InputField) resolve to their
  * nearest container ancestor, while containers and plain groups stay as-is.
+ *
+ * A double click selects the exact nested element (the canvas handler uses the
+ * raw hit target), and `clickTarget` then keeps it selected for dragging.
  */
 export function containerTarget(project: Project, id: string): string {
   let node = project.nodes[id];
   if (!node) return id;
+
+  // A Button owns everything drawn on top of it: the inner sprite is part of
+  // the control, not a separate draggable element (until it is double-clicked).
+  let current: CuiNode | undefined = node;
+  while (current) {
+    if (current.components.some((c) => c.type === "UnityEngine.UI.Button")) return current.id;
+    current = current.parentId ? project.nodes[current.parentId] : undefined;
+  }
+
   while (node.parentId) {
     const hasContainer = node.components.some((c) => CONTAINERS.has(c.type));
     if (hasContainer) break;

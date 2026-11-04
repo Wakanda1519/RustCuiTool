@@ -7,6 +7,7 @@
 import clsx from "clsx";
 import {
   ArrowRight,
+  Cable,
   Clock3,
   FileJson2,
   FilePlus2,
@@ -20,6 +21,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useBridge } from "@/lib/ai/bridge";
+import { useMcpServerInfo } from "@/lib/ai/mcp-status";
 import { hasDirectoryPicker, useItemAssets } from "@/lib/assets/items";
 import { TEMPLATES } from "@/lib/cui/factory";
 import { templateDescription, templateLabel } from "@/lib/i18n/cui";
@@ -32,6 +35,7 @@ import { useEditor } from "@/store/editor";
 import { useRecent } from "@/store/recent";
 import { useUi } from "@/store/ui";
 import { Button } from "@/components/ui/primitives";
+import { McpGuide } from "@/components/editor/ai/McpGuide";
 import { Logo } from "@/components/editor/Logo";
 
 const TEMPLATE_ICONS: Record<string, typeof FilePlus2> = {
@@ -73,6 +77,8 @@ export function Launcher() {
   const openTabs = mounted ? tabs : EMPTY;
   const t = useT();
   const lang = useLang();
+  const { desktop: mcpDesktop, info: mcpInfo } = useMcpServerInfo();
+  const bridgePort = useBridge((s) => s.port);
 
   const itemsPath = useItemAssets((s) => s.path);
   const itemsStatus = useItemAssets((s) => s.status);
@@ -403,6 +409,44 @@ export function Launcher() {
               <li>{t("launcher.tipNames")}</li>
             </ul>
           </div>
+
+          {mcpDesktop && (
+            <div className="mt-4 rounded-2xl border border-line bg-panel/50 p-4">
+              <div className="flex items-center gap-2 text-[12.5px] font-semibold">
+                <Cable className="size-4 text-rust-hi" /> {t("launcher.mcpTitle")}
+                <span
+                  className={clsx(
+                    "ml-auto flex items-center gap-1 text-[10.5px] font-normal",
+                    mcpInfo === null ? "text-faint" : mcpInfo.exists ? "text-good" : "text-amber",
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "size-1.5 rounded-full",
+                      mcpInfo === null ? "bg-faint" : mcpInfo.exists ? "bg-good" : "bg-amber",
+                    )}
+                  />
+                  {mcpInfo === null
+                    ? t("bridge.serverChecking")
+                    : mcpInfo.exists
+                      ? t("launcher.mcpFound")
+                      : t("launcher.mcpMissing")}
+                </span>
+              </div>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-muted">{t("launcher.mcpHint")}</p>
+              {mcpInfo?.path && (
+                <p className="mt-1 break-all font-mono text-[10px] text-faint">{mcpInfo.path}</p>
+              )}
+              <details className="group mt-2">
+                <summary className="cursor-pointer list-none text-[11.5px] text-muted transition hover:text-fg [&::-webkit-details-marker]:hidden">
+                  {t("launcher.mcpGuide")}
+                </summary>
+                <div className="mt-2">
+                  <McpGuide commandPath={mcpInfo?.path ?? ""} port={bridgePort} />
+                </div>
+              </details>
+            </div>
+          )}
 
           <div className="mt-4 rounded-2xl border border-line bg-panel/40 p-4 text-[11.5px] leading-relaxed text-faint">
             <div>

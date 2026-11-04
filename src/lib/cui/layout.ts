@@ -14,10 +14,39 @@ import { uid } from "../uid";
  */
 
 const CELL_ANCHORS = { anchorMin: [0, 1] as Vec2, anchorMax: [0, 1] as Vec2 };
+const CENTER_ANCHORS = { anchorMin: [0.5, 0.5] as Vec2, anchorMax: [0.5, 0.5] as Vec2 };
 
-function setWorldBox(node: CuiNode, box: Box, parent: Box) {
+function sameVec(a: Vec2, b: Vec2): boolean {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+/**
+ * A group container must keep the anchoring semantics of the elements it
+ * replaces. If the cards were centered in their parent, the row stays centered
+ * when the real parent differs from the editor's preview (another aspect,
+ * resolution or plugin window); pinning the container to the parent's top-left
+ * would shift the whole row. Children stay top-left anchored inside the group.
+ */
+function inheritedAnchors(project: Project, ids: string[]): { anchorMin: Vec2; anchorMax: Vec2 } {
+  const first = project.nodes[ids[0]]?.rect;
+  if (!first) return CENTER_ANCHORS;
+  const shared = ids.every((id) => {
+    const rect = project.nodes[id]?.rect;
+    return !!rect && sameVec(rect.anchorMin, first.anchorMin) && sameVec(rect.anchorMax, first.anchorMax);
+  });
+  return shared
+    ? { anchorMin: [...first.anchorMin], anchorMax: [...first.anchorMax] }
+    : CENTER_ANCHORS;
+}
+
+function setWorldBox(
+  node: CuiNode,
+  box: Box,
+  parent: Box,
+  anchors: { anchorMin: Vec2; anchorMax: Vec2 } = CELL_ANCHORS,
+) {
   node.rect = fitWithOffsets(
-    { ...CELL_ANCHORS, offsetMin: [0, 0], offsetMax: [0, 0] },
+    { anchorMin: [...anchors.anchorMin], anchorMax: [...anchors.anchorMax], offsetMin: [0, 0], offsetMax: [0, 0] },
     box,
     parent,
   );
@@ -66,7 +95,7 @@ export function reflowLayout(project: Project, containerId: string, screen: Box,
           h: contentH + padding * 2,
         };
 
-  setWorldBox(container, box, parentBox);
+  setWorldBox(container, box, parentBox, container.rect);
 
   children.forEach((id, index) => {
     const node = project.nodes[id];
@@ -143,13 +172,14 @@ export function groupIntoLayout(project: Project, ids: string[], screen: Box, op
   };
 
   const parentBox = commonParent ? (resolved.get(commonParent) ?? screen) : screen;
+  const anchors = inheritedAnchors(project, boxes.map((b) => b.id));
   const container: CuiNode = {
     id: uid(),
     name: options.name,
     parentId: commonParent,
     children: [],
     rect: fitWithOffsets(
-      { anchorMin: [0, 1], anchorMax: [0, 1], offsetMin: [0, 0], offsetMax: [0, 0] },
+      { anchorMin: [...anchors.anchorMin], anchorMax: [...anchors.anchorMax], offsetMin: [0, 0], offsetMax: [0, 0] },
       box,
       parentBox,
     ),
