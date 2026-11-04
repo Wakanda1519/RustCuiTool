@@ -1,6 +1,6 @@
 # 🎨 RustCuiTool
 
-**Визуальный редактор Rust CUI (Community UI) для Oxide / uMod и Carbon: собирайте интерфейсы мышкой, проверяйте их в живом превью и экспортируйте готовый `CuiHelper.AddUi` JSON или C#-код. Поставляется как один `RCT.exe`.**
+**Визуальный редактор Rust CUI (Community UI) для Oxide / uMod и Carbon: собирайте интерфейсы мышкой, проверяйте их в живом превью и экспортируйте готовый `CuiHelper.AddUi` JSON или C#-код.**
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)
