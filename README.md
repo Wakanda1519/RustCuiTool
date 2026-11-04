@@ -7,6 +7,9 @@
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?style=flat-square&logo=windows&logoColor=white)
 
+<img width="1400" height="900" alt="screenshot-launcher" src="https://github.com/user-attachments/assets/18f1f333-0880-4b1a-a93e-9f4fb3777180" />
+<img width="1936" height="1048" alt="screenshot-editor" src="https://github.com/user-attachments/assets/b63a1f53-840e-4726-bdcc-f3709ad7b42f" />
+
 ## Особенности
 
 * **WYSIWYG-канвас.** Перетаскивание, изменение размера, умные направляющие, сетка, зум и опорное пространство 720p — так же, как UI масштабируется в Rust.
