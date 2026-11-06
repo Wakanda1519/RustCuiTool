@@ -169,12 +169,6 @@ export function Launcher() {
       <header className="relative z-10 flex items-center justify-between px-8 pt-7 pb-4 lg:px-12">
         <div className="flex items-center gap-3">
           <Logo className="size-10 drop-shadow-[0_6px_20px_rgba(206,66,43,0.45)]" />
-          <div>
-            <div className="text-[17px] leading-tight font-semibold tracking-tight">
-              Rust<span className="text-rust-hi">Cui</span>Tool
-            </div>
-            <div className="font-mono text-[10.5px] text-faint">{t("launcher.desktop")}</div>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />

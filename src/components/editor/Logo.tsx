@@ -1,16 +1,11 @@
 export function Logo({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <defs>
-        <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f0643f" />
-          <stop offset="1" stopColor="#b8341f" />
-        </linearGradient>
-      </defs>
-      <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#logo-g)" />
-      <path d="M8 9h9a5 5 0 0 1 0 10h-3l5 5" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 9v15" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="24.5" cy="9" r="2" fill="#ffd66b" />
+    <svg viewBox="0 0 1024 1024" className={className} aria-hidden fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M312.072 447.896L219.377 447.897C227.632 523.498 200.934 534.652 132.846 532.898L132.83 592.763L190.517 653.974H293.53L223.481 580.521C305.408 552.255 321.831 521.746 312.072 447.896Z" fill="white" />
+      <path d="M47 369V533.736H134.408V448.317H221.816V369H47Z" fill="white" />
+      <path d="M801.65 369.019H692.057V445.012H861.562L797.267 493.238V653.993H877.635V445.012H977V369.019H877.635V439.166L801.65 369.019Z" fill="white" />
+      <path d="M446.601 372.497H353.829V465.279H446.601V372.497Z" fill="white" />
+      <path d="M631.83 560.188V654H447.613H353.829C355.396 559.366 379.53 520.472 447.613 466.375C511.978 393.2 552.254 371.125 631.83 372.562V466.375H447.613V654C506.574 583.778 546.037 560.974 631.83 560.188Z" fill="white" />
     </svg>
   );
 }

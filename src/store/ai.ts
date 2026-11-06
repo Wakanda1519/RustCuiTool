@@ -1,33 +1,31 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * RustCuiTool — modified 2026-11-04 (localization).
+ * RustCuiTool — AI store.
  * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
  */
 "use client";
 
-import type { BetaContentBlockParam, BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { describeError, MODELS, runAgent, type Effort, type ModelId } from "@/lib/ai/agent";
+import { describeError, DEFAULT_EFFORT, runAgent, type Effort } from "@/lib/ai/agent";
 import { storeHost } from "@/lib/ai/host";
 import { useEditor } from "@/store/editor";
 import { useI18n } from "@/store/i18n";
+import type { AiProvider } from "@/lib/ai/gateway";
+import type { ContentBlock, ImageAttachment, MessageParam } from "@/lib/ai/types";
 
 export const CONTEXT_TAG = "<editor_state>";
 
-export interface ImageAttachment {
-  mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
-  data: string; // base64
-}
-
 interface AiState {
   apiKey: string;
-  model: ModelId;
+  provider: AiProvider;
+  baseUrl: string;
+  model: string;
   effort: Effort;
-  messages: BetaMessageParam[];
+  messages: MessageParam[];
   streaming: { text: string; thinking: string } | null;
   running: boolean;
   error: string | null;
-  setSettings(patch: Partial<Pick<AiState, "apiKey" | "model" | "effort">>): void;
+  setSettings(patch: Partial<Pick<AiState, "apiKey" | "provider" | "baseUrl" | "model" | "effort">>): void;
   send(text: string, images: ImageAttachment[]): Promise<void>;
   stop(): void;
   clear(): void;
@@ -54,8 +52,10 @@ export const useAi = create<AiState>()(
   persist(
     (set, get) => ({
       apiKey: "",
-      model: MODELS[0].id,
-      effort: "medium",
+      provider: "anthropic",
+      baseUrl: "",
+      model: "",
+      effort: DEFAULT_EFFORT,
       messages: [],
       streaming: null,
       running: false,
@@ -64,11 +64,11 @@ export const useAi = create<AiState>()(
       setSettings: (patch) => set(patch),
 
       send: async (text, images) => {
-        const { apiKey, model, effort, running } = get();
+        const { apiKey, provider, baseUrl, model, effort, running } = get();
         if (running || (!text.trim() && !images.length)) return;
-        const content: BetaContentBlockParam[] = [
+        const content: ContentBlock[] = [
           ...images.map(
-            (img): BetaContentBlockParam => ({
+            (img): ContentBlock => ({
               type: "image",
               source: { type: "base64", media_type: img.mediaType, data: img.data },
             }),
@@ -77,13 +77,21 @@ export const useAi = create<AiState>()(
           { type: "text", text: editorContext() },
         ];
         // Work on a copy; the loop only ever appends, which keeps thinking blocks valid.
-        const messages: BetaMessageParam[] = [...get().messages, { role: "user", content }];
+        const messages: MessageParam[] = [...get().messages, { role: "user", content }];
         controller = new AbortController();
         set({ messages: [...messages], running: true, error: null, streaming: null });
         try {
           await runAgent(
             messages,
-            { apiKey, model, effort, host: storeHost, signal: controller.signal },
+            {
+              apiKey,
+              provider,
+              model,
+              effort,
+              host: storeHost,
+              signal: controller.signal,
+              baseUrl: baseUrl || undefined,
+            },
             { onUpdate: (m, streaming) => set({ messages: [...m], streaming }) },
           );
         } catch (e) {
@@ -103,7 +111,7 @@ export const useAi = create<AiState>()(
     {
       name: "rustcui-ai",
       // The key stays in this browser only; the conversation is not persisted.
-      partialize: (s) => ({ apiKey: s.apiKey, model: s.model, effort: s.effort }),
+      partialize: (s) => ({ apiKey: s.apiKey, provider: s.provider, baseUrl: s.baseUrl, model: s.model, effort: s.effort }),
     },
   ),
 );

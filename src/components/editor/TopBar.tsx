@@ -78,12 +78,6 @@ export function TopBar() {
     <header className="relative z-20 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-panel px-2.5">
       <div className="flex items-center gap-2 pr-1">
         <Logo className="size-7" />
-        <div className="hidden leading-tight lg:block">
-          <div className="text-[13px] font-semibold tracking-tight">
-            Rust<span className="text-rust-hi">Cui</span>Tool
-          </div>
-          <div className="text-[10px] text-faint">Rust CUI editor</div>
-        </div>
       </div>
 
       <Popover

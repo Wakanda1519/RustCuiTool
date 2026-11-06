@@ -1,15 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * RustCuiTool — modified 2026-11-04 (localization).
+ * RustCuiTool — AI panel (provider + chat).
  * Part of RustCuiTool, distributed under GNU GPL v3 (see LICENSE).
  */
 "use client";
 
-import type {
-  BetaContentBlock,
-  BetaContentBlockParam,
-  BetaMessageParam,
-  BetaToolResultBlockParam,
-} from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import clsx from "clsx";
 import {
   ArrowUp,
@@ -27,11 +21,13 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { MODELS, type Effort, type ModelId } from "@/lib/ai/agent";
+import { providerById, POPULAR_PROVIDERS, type AiProvider } from "@/lib/ai/gateway";
+import type { Effort } from "@/lib/ai/agent";
 import type { TKey } from "@/lib/i18n/dictionary";
 import { useT } from "@/lib/i18n/useT";
 import { readImageDataUrl } from "@/lib/platform/desktop";
-import { CONTEXT_TAG, useAi, type ImageAttachment } from "@/store/ai";
+import { CONTEXT_TAG, useAi } from "@/store/ai";
+import type { ContentBlock, ImageAttachment, MessageParam } from "@/lib/ai/types";
 import { Button, Segmented } from "@/components/ui/primitives";
 import { BridgeSection } from "./BridgeSection";
 
@@ -42,43 +38,122 @@ const SUGGESTION_KEYS: TKey[] = [
   "ai.suggestion4",
 ];
 
-type Block = BetaContentBlock | BetaContentBlockParam;
 type TFn = ReturnType<typeof useT>;
 
 export function AiPanel() {
   const apiKey = useAi((s) => s.apiKey);
+  const provider = useAi((s) => s.provider);
+  const model = useAi((s) => s.model);
   const [editingKey, setEditingKey] = useState(false);
+  const info = providerById(provider);
+  const hasKey = Boolean(apiKey.trim());
+  const hasModel = Boolean(model.trim()) || info?.models.includes(model);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {!apiKey || editingKey ? <KeySetup onDone={() => setEditingKey(false)} /> : <Chat onEditKey={() => setEditingKey(true)} />}
+      {!hasKey || !hasModel || editingKey ? (
+        <ProviderSetup onDone={() => setEditingKey(false)} />
+      ) : (
+        <Chat onEditKey={() => setEditingKey(true)} />
+      )}
       <BridgeSection />
     </div>
   );
 }
 
-function KeySetup({ onDone }: { onDone: () => void }) {
-  const current = useAi((s) => s.apiKey);
+function ProviderSetup({ onDone }: { onDone: () => void }) {
   const setSettings = useAi((s) => s.setSettings);
+  const current = useAi((s) => s.apiKey);
+  const curProvider = useAi((s) => s.provider);
+  const curBaseUrl = useAi((s) => s.baseUrl);
+  const curModel = useAi((s) => s.model);
+  const [provider, setProvider] = useState<AiProvider>(curProvider);
   const [key, setKey] = useState(current);
+  const [baseUrl, setBaseUrl] = useState(curBaseUrl);
+  const [model, setModel] = useState(curModel);
   const t = useT();
+  const info = providerById(provider);
+  const isCustom = provider === "custom";
+  const modelOptions = isCustom ? [] : (info?.models ?? []);
+
+  const handleProviderChange = (v: AiProvider) => {
+    setProvider(v);
+    setModel(v === "custom" ? "" : providerById(v)?.defaultModel ?? "");
+  };
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="rounded-2xl border border-line bg-gradient-to-b from-rust/10 to-transparent p-4">
         <div className="mb-3 grid size-10 place-items-center rounded-xl bg-rust/15 text-rust-hi">
           <Sparkles className="size-5" />
         </div>
-        <h3 className="text-[14px] font-semibold">{t("ai.keyTitle")}</h3>
-        <p className="mt-1 text-[12px] leading-relaxed text-muted">{t("ai.keyDescription")}</p>
+        <h3 className="text-[14px] font-semibold">{t("ai.providerTitle")}</h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-muted">{t("ai.providerDescription")}</p>
+
+        <label className="mt-4 block text-[11px] font-medium text-muted">{t("ai.provider")}</label>
+        <select
+          value={provider}
+          onChange={(e) => handleProviderChange(e.target.value as AiProvider)}
+          className="mt-1 h-8 w-full rounded-lg border border-line bg-black/30 px-2.5 font-mono text-[12px] outline-none focus:border-rust/60"
+        >
+          {POPULAR_PROVIDERS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+
         <label className="mt-4 block text-[11px] font-medium text-muted">{t("ai.apiKey")}</label>
         <input
           type="password"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          placeholder="sk-ant-…"
+          placeholder={isCustom ? t("ai.apiKeyPlaceholder") : "sk-ant-…"}
           className="mt-1 h-8 w-full rounded-lg border border-line bg-black/30 px-2.5 font-mono text-[12px] outline-none focus:border-rust/60"
           autoComplete="off"
           spellCheck={false}
         />
+        {info && !isCustom && (
+          <p className="mt-1.5 text-[11px] leading-snug text-faint">{t("ai.keyForProvider", { name: info.label })}</p>
+        )}
+
+        <label className="mt-4 block text-[11px] font-medium text-muted">{t("ai.model")}</label>
+        {isCustom ? (
+          <input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder={t("ai.modelPlaceholder")}
+            className="mt-1 h-8 w-full rounded-lg border border-line bg-black/30 px-2.5 font-mono text-[12px] outline-none focus:border-rust/60"
+            spellCheck={false}
+          />
+        ) : (
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="mt-1 h-8 w-full rounded-lg border border-line bg-black/30 px-2.5 font-mono text-[12px] outline-none focus:border-rust/60"
+          >
+            {modelOptions.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {isCustom && (
+          <>
+            <label className="mt-4 block text-[11px] font-medium text-muted">{t("ai.baseUrl")}</label>
+            <input
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={t("ai.baseUrlPlaceholder")}
+              className="mt-1 h-8 w-full rounded-lg border border-line bg-black/30 px-2.5 font-mono text-[12px] outline-none focus:border-rust/60"
+              spellCheck={false}
+            />
+            <p className="mt-1.5 text-[11px] leading-snug text-faint">{t("ai.baseUrlHint")}</p>
+          </>
+        )}
+
         <p className="mt-1.5 text-[11px] leading-snug text-faint">
           {t("ai.storedBefore")}{" "}
           <a className="text-sky hover:underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
@@ -86,17 +161,18 @@ function KeySetup({ onDone }: { onDone: () => void }) {
           </a>
           {t("ai.storedAfter")}
         </p>
-        <div className="mt-3 flex gap-2">
+
+        <div className="mt-4 flex gap-2">
           <Button
             variant="primary"
             className="flex-1"
-            disabled={!key.trim().startsWith("sk-")}
+            disabled={!key.trim() || (isCustom && (!baseUrl.trim() || !model.trim())) || (!isCustom && !model)}
             onClick={() => {
-              setSettings({ apiKey: key.trim() });
+              setSettings({ apiKey: key.trim(), provider, baseUrl: baseUrl.trim(), model: model.trim() });
               onDone();
             }}
           >
-            <KeyRound className="size-3.5" /> {t("ai.saveKey")}
+            <KeyRound className="size-3.5" /> {t("ai.saveSettings")}
           </Button>
           {current && (
             <Button variant="ghost" onClick={onDone}>
@@ -110,6 +186,10 @@ function KeySetup({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Chat (unchanged rendering, provider-aware settings)                */
+/* ------------------------------------------------------------------ */
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -120,7 +200,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 function imageToAttachment(img: HTMLImageElement): ImageAttachment {
-  // Keep the long edge ≤ 1568px — larger images are downscaled by the API anyway.
   const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(img.width * scale);
@@ -142,7 +221,6 @@ async function toAttachment(file: Blob): Promise<ImageAttachment | null> {
   }
 }
 
-/** Native drops only expose a path, so read and downscale it in the webview. */
 async function pathToAttachment(path: string): Promise<ImageAttachment | null> {
   if (!/\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(path)) return null;
   try {
@@ -153,13 +231,17 @@ async function pathToAttachment(path: string): Promise<ImageAttachment | null> {
 }
 
 function Chat({ onEditKey }: { onEditKey: () => void }) {
-  const { messages, streaming, running, error, model, effort, send, stop, clear, setSettings } = useAi();
+  const { messages, streaming, running, error, model, effort, send, stop, clear } = useAi();
+  const provider = useAi((s) => s.provider);
+  const baseUrl = useAi((s) => s.baseUrl);
+  const setProviderAndModel = useAi((s) => s.setSettings);
   const t = useT();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const modelInfo = MODELS.find((m) => m.id === model) ?? MODELS[0];
+  const info = providerById(provider);
+  const modelInfo = info ? info.models.includes(model) ? { id: model, label: model, provider, thinking: info.thinking } : { id: model, label: model, provider, thinking: info?.thinking ?? false } : { id: model, label: model, provider, thinking: false };
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -171,7 +253,6 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
     if (out.length) setImages((cur) => [...cur, ...out].slice(0, 4));
   };
 
-  // Files dropped from the desktop app arrive as paths, routed here by the native drop handler.
   useEffect(() => {
     const onAttach = async (event: Event) => {
       const paths = (event as CustomEvent<string[]>).detail ?? [];
@@ -193,20 +274,47 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
     <>
       <div className="flex items-center gap-1.5 border-b border-line px-3 py-2">
         <select
-          value={model}
-          onChange={(e) => setSettings({ model: e.target.value as ModelId })}
-          className="h-7 min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-black/25 px-1.5 text-[12px] outline-none"
+          value={provider}
+          onChange={(e) => {
+            const next = e.target.value as AiProvider;
+            setProviderAndModel({
+              provider: next,
+              baseUrl: next === "custom" ? "" : baseUrl,
+              model: providerById(next)?.defaultModel ?? "",
+            });
+          }}
+          className="min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-black/25 px-1.5 text-[12px] outline-none focus:border-rust/60"
         >
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id} className="bg-panel-2">
-              {m.label}
+          {POPULAR_PROVIDERS.map((p) => (
+            <option key={p.id} value={p.id} className="bg-panel-2">
+              {p.label}
             </option>
           ))}
         </select>
+        {info?.id === "custom" ? (
+          <input
+            value={model}
+            onChange={(e) => setProviderAndModel({ model: e.target.value })}
+            placeholder={t("ai.modelPlaceholder")}
+            className="min-w-0 flex-1 rounded-md border border-line bg-black/25 px-1.5 text-[12px] outline-none focus:border-rust/60"
+          />
+        ) : (
+          <select
+            value={model}
+            onChange={(e) => setProviderAndModel({ model: e.target.value })}
+            className="min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-black/25 px-1.5 text-[12px] outline-none focus:border-rust/60"
+          >
+            {(info?.models ?? []).map((m) => (
+              <option key={m} value={m} className="bg-panel-2">
+                {m}
+              </option>
+            ))}
+          </select>
+        )}
         {modelInfo.thinking && (
           <Segmented
             value={effort}
-            onChange={(v) => setSettings({ effort: v as Effort })}
+            onChange={(v) => setProviderAndModel({ effort: v as Effort })}
             options={[
               { value: "low", label: t("ai.effort.low"), title: t("ai.effort.lowTitle") },
               { value: "medium", label: t("ai.effort.medium"), title: t("ai.effort.mediumTitle") },
@@ -217,14 +325,7 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
         <Button variant="ghost" size="sm" className="px-1.5" title={t("ai.apiKeyTitle")} onClick={onEditKey}>
           <KeyRound className="size-3.5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="px-1.5"
-          title={t("ai.newConversation")}
-          disabled={!messages.length}
-          onClick={clear}
-        >
+        <Button variant="ghost" size="sm" className="px-1.5" title={t("ai.newConversation")} disabled={!messages.length} onClick={clear}>
           <Trash2 className="size-3.5" />
         </Button>
       </div>
@@ -283,7 +384,6 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
           <div className="mb-2 flex gap-1.5">
             {images.map((img, i) => (
               <div key={i} className="group relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`data:${img.mediaType};base64,${img.data}`}
                   alt=""
@@ -368,9 +468,9 @@ function Chat({ onEditKey }: { onEditKey: () => void }) {
   );
 }
 
-function Transcript({ messages }: { messages: BetaMessageParam[] }) {
+function Transcript({ messages }: { messages: MessageParam[] }) {
   const results = useMemo(() => {
-    const map = new Map<string, BetaToolResultBlockParam>();
+    const map = new Map<string, Extract<ContentBlock, { type: "tool_result" }>>();
     for (const m of messages) {
       if (m.role !== "user" || typeof m.content === "string") continue;
       for (const b of m.content) if (b.type === "tool_result") map.set(b.tool_use_id, b);
@@ -380,10 +480,10 @@ function Transcript({ messages }: { messages: BetaMessageParam[] }) {
 
   const items: ReactNode[] = [];
   messages.forEach((m, mi) => {
-    const blocks: Block[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : (m.content as Block[]);
+    const blocks: ContentBlock[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : (m.content as ContentBlock[]);
     if (m.role === "user") {
       const texts = blocks.filter(
-        (b): b is Extract<Block, { type: "text" }> => b.type === "text" && !b.text.startsWith(CONTEXT_TAG),
+        (b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text" && !b.text.startsWith(CONTEXT_TAG),
       );
       const imgs = blocks.filter((b) => b.type === "image");
       if (!texts.length && !imgs.length) return; // tool results only
@@ -393,7 +493,6 @@ function Transcript({ messages }: { messages: BetaMessageParam[] }) {
             <div className="flex gap-1">
               {imgs.map((b, i) => {
                 const src = b.type === "image" && b.source.type === "base64" ? `data:${b.source.media_type};base64,${b.source.data}` : "";
-                // eslint-disable-next-line @next/next/no-img-element
                 return <img key={i} src={src} alt="" className="h-16 rounded-lg ring-1 ring-line-strong" />;
               })}
             </div>
@@ -418,7 +517,6 @@ function Transcript({ messages }: { messages: BetaMessageParam[] }) {
 }
 
 function AssistantText({ text }: { text: string }) {
-  // Minimal formatting: fenced code blocks and **bold**.
   const parts = text.split(/```[\w-]*\n?([\s\S]*?)```/g);
   return (
     <div className="space-y-2 text-[12.5px] leading-relaxed text-fg/90">
@@ -482,13 +580,13 @@ function toolLabel(name: string, t: TFn): string {
   return label === key ? name : label;
 }
 
-function ToolChip({ name, input, result }: { name: string; input: unknown; result?: BetaToolResultBlockParam }) {
+function ToolChip({ name, input, result }: { name: string; input: unknown; result?: Extract<ContentBlock, { type: "tool_result" }> }) {
   const [open, setOpen] = useState(false);
   const t = useT();
   const status = !result ? "pending" : result.is_error ? "error" : "ok";
   const shot =
     Array.isArray(result?.content) &&
-    result.content.find((c): c is Extract<typeof c, { type: "image" }> => c.type === "image");
+    result.content.find((c): c is Extract<ContentBlock, { type: "image" }> => c.type === "image");
   const shotSrc = shot && shot.source.type === "base64" ? `data:${shot.source.media_type};base64,${shot.source.data}` : null;
   const resultText =
     typeof result?.content === "string"
@@ -510,7 +608,6 @@ function ToolChip({ name, input, result }: { name: string; input: unknown; resul
         <ChevronRight className={clsx("size-3 shrink-0 text-faint transition", open && "rotate-90")} />
       </button>
       {shotSrc && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={shotSrc} alt={t("ai.canvasScreenshot")} className="mx-2.5 mb-2 w-[calc(100%-20px)] rounded-md ring-1 ring-line" />
       )}
       {open && (
