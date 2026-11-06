@@ -1,0 +1,62 @@
+{
+  "$schema": "https://tauri.app/schema/v2/config.json",
+  "productName": "RustCuiTool",
+  "version": "1.0.1",
+  "identifier": "com.rustcuitool",
+  "build": {
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "RustCuiTool",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "copyright": "Copyright (c) 2026 hammzat",
+    "category": "Utility",
+    "shortDescription": "Visual editor for Rust CUI interfaces",
+    "longDescription": "RustCuiTool — visual editor for Rust (Oxide / Carbon) CUI interfaces",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  },
+  "plugins": {
+    "dialog": null,
+    "opener": null
+  }
+}
